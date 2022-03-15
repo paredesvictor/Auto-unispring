@@ -1,3 +1,4 @@
+
 import argparse
 import math
 import random
@@ -6,14 +7,8 @@ from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
 
-
 def callBackFunction(addrs, args, message):
-    if random.random() < 0.5:
-        args[0].send_message("/update", 'done')
-    else:
-        args[0].send_message("/update", 'failed')
-        
-
+    args[0].send_message("/update", message)
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -38,4 +33,3 @@ if __name__ == "__main__":
         (args_server.ip, args_server.port), dispatcher)
     print("Serving on {}".format(server.server_address))
     server.serve_forever()
-    
