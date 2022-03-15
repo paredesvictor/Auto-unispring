@@ -11,7 +11,7 @@ from scipy.spatial import Delaunay, ConvexHull, KDTree
 from numpy import arctan2, sqrt, sin, cos, asarray, degrees
 from math import pi
 
-plt.rcParams['figure.dpi'] = 300
+plt.rcParams['figure.dpi'] = 100
     
 class Corpus():
     
@@ -594,7 +594,7 @@ class RegionCircle():
             plt.show()
 
 if __name__ == '__main__':
-    # region building --> trigonometric rotation !
+    ## region building --> trigonometric rotation !
     vertices = ((0,0),(1,0),(1,1),(0,1))
     vertices2 = ((0.1,0.1),(0.8,0.2),(0.8,0.6),(0.6,0.5),(0.05,0.68))
     regionSquare = RegionPolygon(vertices)
@@ -603,17 +603,19 @@ if __name__ == '__main__':
     
     region = regionSquare
     
-    # corpus creation
+    ## corpus creation
     descX = 'CentroidMean'
     descY = 'PeriodicityMean'
-    corpus = Corpus('/Users/victorparedes/Documents/Max 8/Projects/Sympoiesis/patchers/unispring/data_sympoiesis_cut.json', region, descX, descY, plot=True)
+    corpus = Corpus('/Users/victorparedes/Documents/Max 8/Projects/Sympoiesis/corpus/data_sympoiesis_cut.json',
+    region, descX, descY, plot=False)
 
-    # pre-uniformization
+    ## pre-uniformization
     corpus.preUniformization(inSquareAuto=False)
-    corpus.plot()
     #tri = corpus.delaunayTriangulation()
     #corpus.plot(tri=False, show=False)
-    corpus.unispringUniform(1, 0.02, 0.015, plotPeriod = 100)
+    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=100)
     #border = corpus.getBorderPoints()
     corpus.plot()
+
+    ## export final corpus to json
     #corpus.exportJson('data_sympoiesis_uni.json')
