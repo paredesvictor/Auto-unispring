@@ -1,5 +1,4 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#%%
 """
 Created on Wed Feb 23 13:58:22 2022
 
@@ -594,21 +593,20 @@ class RegionCircle():
         if show:
             plt.show()
 
-
 if __name__ == '__main__':
     # region building --> trigonometric rotation !
-    vertices = ((0.1,0.1),(0.9,0.1),(0.9,0.9),(0.1,0.9))
+    vertices = ((0,0),(1,0),(1,1),(0,1))
     vertices2 = ((0.1,0.1),(0.8,0.2),(0.8,0.6),(0.6,0.5),(0.05,0.68))
     regionSquare = RegionPolygon(vertices)
     regionPoly = RegionPolygon(vertices2)
     regionCircle = RegionCircle(0.5,0.5,0.5)
     
-    region = regionCircle
+    region = regionSquare
     
     # corpus creation
     descX = 'CentroidMean'
     descY = 'PeriodicityMean'
-    corpus = Corpus('data_sympoiesis_cut.json', region, descX, descY, plot=True)
+    corpus = Corpus('/Users/victorparedes/Documents/Max 8/Projects/Sympoiesis/patchers/unispring/data_sympoiesis_cut.json', region, descX, descY, plot=True)
 
     # pre-uniformization
     corpus.preUniformization(inSquareAuto=False)
@@ -618,5 +616,4 @@ if __name__ == '__main__':
     corpus.unispringUniform(1, 0.02, 0.015, plotPeriod = 100)
     #border = corpus.getBorderPoints()
     corpus.plot()
-    
-    corpus.exportJson('data_sympoiesis_uni.json')
+    #corpus.exportJson('data_sympoiesis_uni.json')
