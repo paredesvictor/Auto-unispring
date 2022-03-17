@@ -1,16 +1,17 @@
-#!/usr/bin/env python3
-# -*- coding: utf-8 -*-
+#%%
 """
-Created on Thu Feb 10 12:24:33 2022
+Created on Wed Feb 23 13:58:22 2022
 
 @author: victorparedes
 """
 # Import
 import json
 import matplotlib.pyplot as plt
-from scipy.spatial import Delaunay, KDTree
-from numpy import arctan2, sqrt, sin, cos, asarray
+from scipy.spatial import Delaunay, ConvexHull, KDTree
+from numpy import arctan2, sqrt, sin, cos, asarray, degrees
 from math import pi
+
+plt.rcParams['figure.dpi'] = 100
     
 class Corpus():
     
@@ -65,6 +66,12 @@ class Corpus():
         '''
         for buffer in self.buffers:
             buffer.extractPoints(descrNameX, descrNameY)
+    
+    def getAllPoints(self):
+        allPoints = []
+        for buffer in self.buffers:
+            allPoints += buffer.points
+        return allPoints
         
     def normalize(self):
         '''
@@ -82,6 +89,75 @@ class Corpus():
         for buffer in self.buffers:
             buffer.normalize(upperX, lowerX, upperY, lowerY)
         self.is_norm = True
+        
+    def getBorderPoints(self):
+        allPoints = self.getAllPoints()
+        allCoord = asarray([(pt.x, pt.y) for pt in self.getAllPoints()])
+        hull = [allPoints[idx] for idx in ConvexHull(allCoord).vertices]
+        tree = KDTree(allCoord)
+        
+        maxDist = self.meanDistance()
+        
+        current = hull[0]
+        prev = hull[-1]
+        border = [current]
+        print(int(degrees(current.vecOrientation(prev))))
+        while True:
+            nearest = tree.query_ball_point((current.x,current.y),
+                                            r=maxDist)
+            maxAngle = 2 * pi
+            for pt in [allPoints[idx] for idx in nearest]:
+                isCloseToPrev = prev.distTo(pt) < maxDist
+                    
+                if pt != prev and pt != current:
+                    anglePrev = current.vecOrientation(prev)
+                    angleNext = current.vecOrientation(pt)
+                    angle = angleNext - anglePrev
+                    if angle < 0:
+                        angle += 2 * pi
+                    if angle < maxAngle:
+                        print(round(pt.x, 2), round(pt.y, 2),
+                              int(degrees(anglePrev)), int(degrees(angleNext)),
+                              int(degrees(angle)), ' x'
+                              )
+                        maxAngle = angle
+                        nextPoint = pt
+                    else:
+                        print(round(pt.x, 2), round(pt.y, 2),
+                              int(degrees(anglePrev)), int(degrees(angleNext)),
+                              int(degrees(angle))
+                              )
+                        
+            if nextPoint==border[0]:
+                print('done')
+                return border
+            if len(border) > 100:
+                print('aie')
+                return border
+            
+            border.append(nextPoint)
+    
+            self.plot(tri=False, show=False)
+            plt.plot(border[-2].x, border[-2].y, 'x')
+            for i in range(1,len(border)):
+                p1 = border[i-1]
+                p2 = border[i]
+                x = (p1.x, p2.x)
+                y = (p1.y, p2.y)
+                plt.plot(x,y,color='blue')
+            plt.show()
+            input((round(nextPoint.x, 2), round(nextPoint.y, 2),
+                   int(degrees(anglePrev)), int(degrees(angleNext))
+                  ))
+            
+            prev, current = current, nextPoint
+    
+    def meanDistance(self):
+        d = 0
+        for point in self.getAllPoints():
+            for near in point.near:
+                d += point.distTo(near)
+        return d / (2 * len(self.getAllPoints()))
             
     def preUniformization(self, og=(0,0), s = 1, inSquareAuto=False):
         '''
@@ -123,6 +199,13 @@ class Corpus():
         allCoord = asarray(allCoord)
         triangulation = Delaunay(allCoord)
         self.updateNearPoints(triangulation)
+        return triangulation
+    
+    def convexHull(self):
+        allCoord = [[pt.x, pt.y] for pt in self.getAllPoints()]
+        allCoord = asarray(allCoord)
+        convexHull = ConvexHull(allCoord)
+        return convexHull
     
     def updateNearPoints(self, triangulation):
         '''
@@ -250,14 +333,14 @@ class Corpus():
             fig.axes.get_xaxis().set_visible(False)
             fig.axes.get_yaxis().set_visible(False)
             fig.axes.set_aspect('equal')
-            fig.axes.set_xlim([0,1])
-            fig.axes.set_ylim([0,1])
+            fig.axes.set_xlim([-0.1,1.1])
+            fig.axes.set_ylim([-0.1,1.1])
         else:
             fig.axes.set_aspect('auto')
         if show:
             plt.show()
     
-    def exportJson(self):
+    def exportJson(self, name):
         '''
         Export the corpus into a new json file with added descriptors 
         corresponding to the new distribution.
@@ -268,7 +351,7 @@ class Corpus():
         for buffer in self.buffers:
             buffer.updateJson(self.data, descr['mxCols'])
         descr['mxCols'] += 2
-        with open('data_uni.json', 'w') as file:
+        with open(name, 'w') as file:
             json.dump(self.data, file, indent=2)
         
         
@@ -354,6 +437,14 @@ class Point():
         nextY = pt.y #+ random() * 0.0001
         self.pushX = nextX - self.x
         self.pushY = nextY - self.y
+    
+    def distToCenter(self):
+        return self.distTo(Point(0.5, 0.5))
+
+    def vecOrientation(self, point):
+        x = point.x - self.x
+        y = point.y - self.y
+        return arctan2(y,x)
 
 class BorderPoint(Point):
     
@@ -435,8 +526,8 @@ class RegionPolygon():
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
         fig.axes.set_aspect('equal')
-        fig.axes.set_xlim([0,1])
-        fig.axes.set_ylim([0,1])
+        fig.axes.set_xlim([-0.1,1.1])
+        fig.axes.set_ylim([-0.1,1.1])
         if show:
             plt.show()
             
@@ -496,40 +587,35 @@ class RegionCircle():
         fig.axes.get_xaxis().set_visible(False)
         fig.axes.get_yaxis().set_visible(False)
         fig.axes.set_aspect('equal')
-        fig.axes.set_xlim([0,1])
-        fig.axes.set_ylim([0,1])
+        fig.axes.set_xlim([-0.1,1.1])
+        fig.axes.set_ylim([-0.1,1.1])
         fig.axes.add_patch(circle)
         if show:
             plt.show()
 
-
-        
 if __name__ == '__main__':
-        
-    # region building --> trigonometric rotation !
-    vertices = ((0.1,0.1),(0.9,0.1),(0.9,0.9),(0.1,0.9))
+    ## region building --> trigonometric rotation !
+    vertices = ((0,0),(1,0),(1,1),(0,1))
     vertices2 = ((0.1,0.1),(0.8,0.2),(0.8,0.6),(0.6,0.5),(0.05,0.68))
     regionSquare = RegionPolygon(vertices)
     regionPoly = RegionPolygon(vertices2)
-    regionCircle = RegionCircle(0.5,0.5,0.4)
+    regionCircle = RegionCircle(0.5,0.5,0.5)
     
-    region = regionPoly
+    region = regionSquare
     
-    # corpus creation
-    descX = 'PeriodicityMean'
-    descY = 'CentroidMean'
-    corpus = Corpus('data.json', region, descX, descY, plot=False)
-    #corpus.plot()
+    ## corpus creation
+    descX = 'CentroidMean'
+    descY = 'PeriodicityMean'
+    corpus = Corpus('/Users/victorparedes/Documents/Max 8/Projects/Sympoiesis/corpus/data_sympoiesis_cut.json',
+    region, descX, descY, plot=False)
 
-    # pre-uniformization
-    corpus.preUniformization(inSquareAuto=True)
-    corpus.plot(show=False)
-    region.plot()
-    
-    # uniformization
-    k = 1
-    n = corpus.unispringUniform(k, 0.005, 0.01, 10)
-    print('done in ', n, ' steps')
-    #corpus.plot(tri=False)
-        
-    corpus.exportJson()
+    ## pre-uniformization
+    corpus.preUniformization(inSquareAuto=False)
+    #tri = corpus.delaunayTriangulation()
+    #corpus.plot(tri=False, show=False)
+    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=100)
+    #border = corpus.getBorderPoints()
+    corpus.plot()
+
+    ## export final corpus to json
+    #corpus.exportJson('data_sympoiesis_uni.json')

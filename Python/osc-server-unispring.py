@@ -2,13 +2,42 @@
 import argparse
 import math
 import random
-#import unispring as usp
+import unispring as usp
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
 
-def callBackFunction(addrs, args, message):
-    args[0].send_message("/update", message)
+def apply_unispring(addrs, message):
+    if message == "apply":
+        descX = "CentroidMean"
+        descY = "PeriodicityMean"
+        region = RegionPolygon(vertices)
+        corpus = Corpus('/Users/victorparedes/Documents/GitHub/Auto-unispring/corpus.json',
+        region, descX, descY, plot=False)
+        corpus.preUniformization(inSquareAuto=False)
+        corpus.unispringUniform(1, 0.02, 0.01)
+        corpus.exportJson('/Users/victorparedes/Documents/GitHub/Auto-unispring/remap.json')
+
+def init_unispring(addrs, message):
+    if message == "apply":
+        print('Creating corpus and region')
+        vertices = ((0,0),(1,0),(1,1),(0,1))
+        descX = "CentroidMean"
+        descY = "PeriodicityMean"
+        region = usp.RegionPolygon(vertices)
+        corpus = usp.Corpus('/Users/victorparedes/Documents/GitHub/Auto-unispring/corpus.json',
+        region, descX, descY, plot=False)
+        print('preUniformization')
+        corpus.preUniformization(inSquareAuto=False)
+        print('uniformization')
+        corpus.unispringUniform(1, 0.02, 0.01)
+        print('export')
+        corpus.exportJson('/Users/victorparedes/Documents/GitHub/Auto-unispring/remap.json')
+
+def new_region(addrs, *coord):
+    vertices = [(coord[i],coord[i+1]) for i in range(0,len(coord),2)]
+    region = usp.RegionPolygon(vertices)
+    return region
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -25,8 +54,8 @@ if __name__ == "__main__":
     args_server = parser_server.parse_args()
     
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/message", print)
-    dispatcher.map("/message", callBackFunction, client)
+    dispatcher.map("/region", new_region)
+    dispatcher.map("/unispring", init_unispring)
     
     
     server = osc_server.ThreadingOSCUDPServer(
