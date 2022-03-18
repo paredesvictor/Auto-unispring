@@ -603,7 +603,7 @@ if __name__ == '__main__':
     regionPoly = RegionPolygon(vertices2)
     regionCircle = RegionCircle(0.5,0.5,0.5)
     
-    region = regionPoly
+    region = regionSquare
     
     ## corpus creation
     descX = 'CentroidMean'
@@ -615,10 +615,9 @@ if __name__ == '__main__':
     corpus.preUniformization(inSquareAuto=False)
     #tri = corpus.delaunayTriangulation()
     #corpus.plot(tri=False, show=False)
-    corpus.unispringUniform(1, 0.01, 0.02, plotPeriod=100)
+    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=100)
     #border = corpus.getBorderPoints()
     corpus.plot()
-    print('done')
 
     ## export final corpus to json
     #corpus.exportJson('data_sympoiesis_uni.json')
