@@ -345,10 +345,7 @@ class Corpus():
         Export the corpus into a new json file with added descriptors 
         corresponding to the new distribution.
         '''
-        self.data['tracks'].append(dict(self.data['tracks'][1]))
-        self.data['numTracks'] += 1
-        descr = self.data['tracks'][2]
-        descr['name'] = "descr-audio-uni"
+        descr = self.data['tracks'][1]
         descr['mxColNames'].append('unispringX')
         descr['mxColNames'].append('unispringY')
         for buffer in self.buffers:
@@ -382,6 +379,7 @@ class Buffer():
         for point in self.points:
             allCoord.append([point.x, point.y])
         vals = data['tracks'][1]['buffers'][self.id]['mxData']
+        
         updateVals = []
         for i in range(len(vals)):
             updateVals.append(vals[i])
