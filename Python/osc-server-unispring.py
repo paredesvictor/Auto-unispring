@@ -16,8 +16,9 @@ def update_unispring(addrs, args, *coord):
     print(2)
     temp_corpus.unispringUniform(1, 0.01, 0.02)
     print('export')
-    temp_corpus.exportJson(args[1]['dir'] + '/remap.json')
-    args[0].send_message("/unispring", 'done')
+    save_dir = args[1]['dir'] + '/remap.json'
+    temp_corpus.exportJson(save_dir)
+    args[0].send_message("/unispring", save_dir)
 
 def init_unispring(addrs, args, directory):
     print('Creating corpus and region')
