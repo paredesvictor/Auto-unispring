@@ -1,4 +1,5 @@
 import argparse
+import os
 from copy import copy
 import unispring as usp
 from pythonosc import dispatcher
@@ -9,18 +10,17 @@ from pythonosc import udp_client
 def update_unispring(addrs, args, *coord):
     print('updating unispring...')
     temp_corpus = copy(args[1]["corpus1"])
-    print(1)
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
-    print(2)
     temp_corpus.unispringUniform(1, 0.01, 0.02)
     print('export')
     save_dir = args[1]['dir'] + '/remap.json'
     temp_corpus.exportJson(save_dir)
     args[0].send_message("/unispring", save_dir)
 
-def init_unispring(addrs, args, directory):
+def init_unispring(addrs, args, max_dir):
+    directory = '/' + max_dir.replace(' ','')
     print('Creating corpus and region')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     descX = "CentroidMean"
@@ -36,7 +36,7 @@ def init_unispring(addrs, args, directory):
     corpus.exportJson(directory + '/remap.json')
     args[1]['corpus1'] = corpus
     args[1]['dir'] = directory
-    args[0].send_message("/unispring", 'done')
+    args[0].send_message("/unispring", directory)
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
