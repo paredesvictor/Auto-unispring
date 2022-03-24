@@ -1,5 +1,4 @@
 import argparse
-import os
 from copy import copy
 import unispring as usp
 from pythonosc import dispatcher
@@ -15,9 +14,23 @@ def update_unispring(addrs, args, *coord):
     temp_corpus.region = region
     temp_corpus.unispringUniform(1, 0.01, 0.02)
     print('export')
-    save_dir = args[1]['dir'] + '/remap.json'
-    temp_corpus.exportJson(save_dir)
+    save_dir = args[1]['dir']
+    temp_corpus.exportJson(save_dir+'/remap.json')
     args[0].send_message("/unispring", save_dir)
+    print('waiting...')
+
+def update_unispring_alt(addrs, args, *coord):
+    print('updating unispring...')
+    temp_corpus = args[1]["corpus1"]
+    vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
+    region = usp.RegionPolygon(vertices)
+    temp_corpus.region = region
+    temp_corpus.unispringUniform(1, 0.01, 0.02)
+    print('export')
+    save_dir = args[1]['dir']
+    temp_corpus.exportJson(save_dir+'/remap.json')
+    args[0].send_message("/unispring", save_dir)
+    print('waiting...')
 
 def init_unispring(addrs, args, max_dir):
     directory = '/' + max_dir.replace(' ','')
@@ -28,8 +41,6 @@ def init_unispring(addrs, args, max_dir):
     region = usp.RegionPolygon(vertices)
     corpus = usp.Corpus(directory + '/corpus.json',
     region, descX, descY, plot=False)
-    print('preUniformization')
-    corpus.preUniformization(inSquareAuto=False)
     print('uniformization...')
     corpus.unispringUniform(1, 0.01, 0.02)
     print('export')
@@ -37,6 +48,7 @@ def init_unispring(addrs, args, max_dir):
     args[1]['corpus1'] = corpus
     args[1]['dir'] = directory
     args[0].send_message("/unispring", directory)
+    print('waiting...')
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -54,10 +66,11 @@ if __name__ == "__main__":
     
     corpus = {}
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/region", update_unispring, client, corpus)
+    dispatcher.map("/region", update_unispring_alt, client, corpus)
     dispatcher.map("/unispring", init_unispring, client, corpus)
     
     server = osc_server.ThreadingOSCUDPServer(
         (args_server.ip, args_server.port), dispatcher)
     print("Serving on {}".format(server.server_address))
+    print('waiting...')
     server.serve_forever()

@@ -51,6 +51,7 @@ class Corpus():
         if plot:
             self.plot()
         self.normalize()
+        self.preUniformization()
     
     def extractPoints(self, descrNameX, descrNameY):
         '''
@@ -159,34 +160,43 @@ class Corpus():
                 d += point.distTo(near)
         return d / (2 * len(self.getAllPoints()))
             
-    def preUniformization(self, og=(0,0), s = 1, inSquareAuto=False):
+    def preUniformization(self, resize=False, og=(0,0), s = 1, inSquareAuto=False):
         '''
-        Distribute points in a square before using unispring.
+        Distribute points in the bounding box of the region.
 
         Parameters
         ----------
+        resize : bool, optional
+            just move the points in the destination box, no sort. The default is False
         og : tuple, optional
             origin of the square (bottom-left). The default is (0,0).
         s : float, optional
             length of the side of the square. The default is 1.
         inSquareAuto : bool, optional
-            autocalculate the insquare of the region. The default is False.
+            autocalculate the bounding box of the region. The default is False.
         '''
         if inSquareAuto:
-            side, origin = self.region.inSquare()
+            p1, p2 = self.region.getBoundingBox()
+            sideX, sideY, origin = p2.x-p1.x, p2.y-p1.y, p1
         else:
-            side, origin = (s, Point(og[0],og[1]))
+            sideX, sideY, origin = s, s, Point(og[0],og[1])
         
         allPoints = []
         for buffer in self.buffers:
             allPoints += buffer.points
         nbPoints = len(allPoints)
-        allPoints.sort(key=Point.getX)
-        for i in range(nbPoints):
-            allPoints[i].x = (i / (nbPoints - 1)) * side + origin.x
-        allPoints.sort(key=Point.getY)
-        for i in range(nbPoints):
-            allPoints[i].y = (i / (nbPoints - 1)) * side + origin.y
+        if not resize:
+            allPoints.sort(key=Point.getX)
+            for i in range(nbPoints):
+                allPoints[i].x = (i / (nbPoints - 1)) * sideX + origin.x
+            allPoints.sort(key=Point.getY)
+            for i in range(nbPoints):
+                allPoints[i].y = (i / (nbPoints - 1)) * sideY + origin.y
+        else:
+            for i in range(nbPoints):
+                allPoints[i].x = allPoints[i].x * sideX + origin.x
+            for i in range(nbPoints):
+                allPoints[i].y = allPoints[i].y * sideY + origin.y
         
     def delaunayTriangulation(self):
         '''
@@ -262,6 +272,7 @@ class Corpus():
         '''
         # first triangulation
         self.delaunayTriangulation()
+        self.preUniformization(resize=True, inSquareAuto=True)
         allPoints = []
         for buffer in self.buffers:
             allPoints += buffer.points
@@ -508,6 +519,24 @@ class RegionPolygon():
         p2 = self.vertices[0]
         area += p1.x * p2.y - p2.x * p1.y
         return area / 2
+
+    def getBoundingBox(self):
+        ver1 = self.vertices[0]
+        ver2 = self.vertices[1]
+        xmin = min(ver1.x, ver2.x)
+        xmax = max(ver1.x, ver2.x)
+        ymin = min(ver1.y, ver2.y)
+        ymax = max(ver1.y, ver2.y)
+        for vertice in self.vertices:
+            if vertice.x < xmin:
+                xmin = vertice.x
+            elif vertice.x > xmax:
+                xmax = vertice.x
+            if vertice.y < ymin:
+                ymin = vertice.y
+            elif vertice.y > ymax:
+                ymax = vertice.y
+        return Point(xmin, ymin), Point(xmax, ymax)
     
     def isInside(self, pt):
         nextX = pt.x + pt.pushX
@@ -518,7 +547,7 @@ class RegionPolygon():
         isIn2 = closestPoints[1].edge.isRightSide(pt)  
         return isIn1 and isIn2, closestPoints[0]
 
-    def plot(self, show=True):
+    def plot(self, show=True, pltBbox=False):
         pointsX = [point.x for point in self.points]
         pointsY = [point.y for point in self.points]
         fig = plt.scatter(pointsX, pointsY, s = 8)
@@ -528,6 +557,10 @@ class RegionPolygon():
         fig.axes.set_aspect('equal')
         fig.axes.set_xlim([-0.1,1.1])
         fig.axes.set_ylim([-0.1,1.1])
+        if pltBbox:
+            p1, p2 = self.getBoundingBox()
+            rectangle = plt.Rectangle((p1.x,p1.y), p2.x-p1.x, p2.y-p1.y, fc='none', ec="red")
+            fig.axes.add_patch(rectangle)
         if show:
             plt.show()
             
@@ -562,6 +595,13 @@ class RegionCircle():
     def getArea(self):
         return pi * self.radius**2
     
+    def getBoundingBox(self):
+        xmin = self.center.x - self.radius
+        ymin = self.center.y - self.radius
+        xmax = self.center.x + self.radius
+        ymax = self.center.y + self.radius
+        return Point(xmin, ymin), Point(xmax, ymax)
+    
     def isInside(self, pt):
         nextX = pt.x + pt.pushX
         nextY = pt.y + pt.pushY
@@ -579,7 +619,7 @@ class RegionCircle():
         side = 2 * self.radius / sqrt(2)
         return side, origin
     
-    def plot(self, show=True):
+    def plot(self, show=True, pltBbox=False):
         circle = plt.Circle((self.center.x,self.center.y),
                             self.radius, fill=False)
         fig = plt.scatter(self.center.x,self.center.y,marker='x')
@@ -590,6 +630,10 @@ class RegionCircle():
         fig.axes.set_xlim([-0.1,1.1])
         fig.axes.set_ylim([-0.1,1.1])
         fig.axes.add_patch(circle)
+        if pltBbox:
+            p1, p2 = self.getBoundingBox()
+            rectangle = plt.Rectangle((p1.x,p1.y), p2.x-p1.x, p2.y-p1.y, fc='none', ec="red")
+            fig.axes.add_patch(rectangle)
         if show:
             plt.show()
 
@@ -606,16 +650,18 @@ if __name__ == '__main__':
     ## corpus creation
     descX = 'CentroidMean'
     descY = 'PeriodicityMean'
-    corpus = Corpus('/Users/victorparedes/Documents/Max 8/Projects/Sympoiesis/corpus/data_sympoiesis_cut.json',
-    region, descX, descY, plot=False)
+    corpus = Corpus('/Users/victorparedes/Documents/GitHub/Auto-unispring/corpus.json',
+    region, descX, descY, plot=True)
 
     ## pre-uniformization
-    corpus.preUniformization(inSquareAuto=False)
-    #tri = corpus.delaunayTriangulation()
-    #corpus.plot(tri=False, show=False)
-    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=100)
-    #border = corpus.getBorderPoints()
     corpus.plot()
+    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
+    corpus.plot()
+#%%
+    corpus.region = regionPoly
+    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
+    corpus.plot()
+
 
     ## export final corpus to json
     #corpus.exportJson('data_sympoiesis_uni.json')
