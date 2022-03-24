@@ -246,7 +246,7 @@ class Corpus():
                 p3.near.append(p2)
                 p2.near.append(p3)
         
-    def unispringUniform(self, k, minDist, maxDist, plotPeriod=0):
+    def unispringUniform(self, k, minDist, maxDist, plotPeriod=0, limit=0):
         '''
         Perform a distribution of the corpus points in the user-defined region
         using a spring-mass physical model.
@@ -311,6 +311,9 @@ class Corpus():
                     exit = True
             if plotPeriod != 0  and count%plotPeriod == 0:
                 self.plot(tri=False)
+            if limit != 0 and count > limit:
+                print('forced exit')
+                exit = True
         return count
             
     def plot(self, tri=False, show=True):
