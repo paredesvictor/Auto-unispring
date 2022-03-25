@@ -91,68 +91,6 @@ class Corpus():
             buffer.normalize(upperX, lowerX, upperY, lowerY)
         self.is_norm = True
         
-    def getBorderPoints(self):
-        allPoints = self.getAllPoints()
-        allCoord = asarray([(pt.x, pt.y) for pt in self.getAllPoints()])
-        hull = [allPoints[idx] for idx in ConvexHull(allCoord).vertices]
-        tree = KDTree(allCoord)
-        
-        maxDist = self.meanDistance()
-        
-        current = hull[0]
-        prev = hull[-1]
-        border = [current]
-        print(int(degrees(current.vecOrientation(prev))))
-        while True:
-            nearest = tree.query_ball_point((current.x,current.y),
-                                            r=maxDist)
-            maxAngle = 2 * pi
-            for pt in [allPoints[idx] for idx in nearest]:
-                isCloseToPrev = prev.distTo(pt) < maxDist
-                    
-                if pt != prev and pt != current:
-                    anglePrev = current.vecOrientation(prev)
-                    angleNext = current.vecOrientation(pt)
-                    angle = angleNext - anglePrev
-                    if angle < 0:
-                        angle += 2 * pi
-                    if angle < maxAngle:
-                        print(round(pt.x, 2), round(pt.y, 2),
-                              int(degrees(anglePrev)), int(degrees(angleNext)),
-                              int(degrees(angle)), ' x'
-                              )
-                        maxAngle = angle
-                        nextPoint = pt
-                    else:
-                        print(round(pt.x, 2), round(pt.y, 2),
-                              int(degrees(anglePrev)), int(degrees(angleNext)),
-                              int(degrees(angle))
-                              )
-                        
-            if nextPoint==border[0]:
-                print('done')
-                return border
-            if len(border) > 100:
-                print('aie')
-                return border
-            
-            border.append(nextPoint)
-    
-            self.plot(tri=False, show=False)
-            plt.plot(border[-2].x, border[-2].y, 'x')
-            for i in range(1,len(border)):
-                p1 = border[i-1]
-                p2 = border[i]
-                x = (p1.x, p2.x)
-                y = (p1.y, p2.y)
-                plt.plot(x,y,color='blue')
-            plt.show()
-            input((round(nextPoint.x, 2), round(nextPoint.y, 2),
-                   int(degrees(anglePrev)), int(degrees(angleNext))
-                  ))
-            
-            prev, current = current, nextPoint
-    
     def meanDistance(self):
         d = 0
         for point in self.getAllPoints():
@@ -643,7 +581,8 @@ class RegionCircle():
 if __name__ == '__main__':
     ## region building --> trigonometric rotation !
     vertices = ((0,0),(1,0),(1,1),(0,1))
-    vertices2 = ((0.1,0.1),(0.8,0.2),(0.8,0.6),(0.6,0.5),(0.05,0.68))
+    coord = "0.2919999957084656 0.7099999785423279 0.671999990940094 0.7139999866485596 0.6399999856948853 0.2939999997615814 0.3160000145435333 0.2919999957084656 0.7239999771118164 0.7279999852180481 0.7059999704360962 0.25600001215934753 0.2540000081062317 0.272000014781951".split(' ')
+    vertices2 = [(int(coord[i]),1-int(coord[i+1])) for i in range(0,len(coord),2)]
     regionSquare = RegionPolygon(vertices)
     regionPoly = RegionPolygon(vertices2)
     regionCircle = RegionCircle(0.5,0.5,0.5)
@@ -660,6 +599,7 @@ if __name__ == '__main__':
     corpus.plot()
     corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
     corpus.plot()
+    regionPoly.plot()
 #%%
     corpus.region = regionPoly
     corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)

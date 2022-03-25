@@ -16,7 +16,7 @@ class recursion_depth:
         sys.setrecursionlimit(self.default_limit)
 
 def update_unispring(addrs, args, *coord):
-    print('update')
+    print('updating...')
     n = 1
     while True:
         try:
@@ -28,7 +28,7 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
-    temp_corpus.unispringUniform(1, 0.01, 0.02, limit = 1200)
+    temp_corpus.unispringUniform(1, 0.01, 0.02, limit = 300)
     print('export')
     save_dir = args[1]['dir']
     temp_corpus.exportJson(save_dir+'/remap.json')
