@@ -409,7 +409,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 546.0, 529.0, 636.0, 314.0 ],
+						"rect" : [ 734.0, 847.0, 636.0, 314.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,
@@ -627,7 +627,7 @@
 , 							{
 								"patchline" : 								{
 									"destination" : [ "obj-15", 0 ],
-									"source" : [ "obj-7", 2 ]
+									"source" : [ "obj-7", 3 ]
 								}
 
 							}
@@ -1652,7 +1652,6 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-89",
-									"int" : 1,
 									"maxclass" : "gswitch2",
 									"numinlets" : 2,
 									"numoutlets" : 2,
@@ -5160,7 +5159,6 @@
 						"style" : "",
 						"subpatcher_template" : "",
 						"assistshowspatchername" : 0,
-						"visible" : 1,
 						"boxes" : [ 							{
 								"box" : 								{
 									"comment" : "",
@@ -9564,7 +9562,6 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-25",
-									"int" : 1,
 									"maxclass" : "gswitch2",
 									"numinlets" : 2,
 									"numoutlets" : 2,
@@ -9577,7 +9574,6 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-24",
-									"int" : 1,
 									"maxclass" : "gswitch2",
 									"numinlets" : 2,
 									"numoutlets" : 2,
@@ -11681,7 +11677,7 @@
 					"cursor_nearest" : 0,
 					"cursor_nearestcolor" : [ 1.0, 0.0, 0.0, 1.0 ],
 					"cursor_noringoffset" : 0,
-					"cursor_position" : 0.493508337064652,
+					"cursor_position" : -1.0,
 					"cursor_shape" : "circle",
 					"cursor_size" : 25,
 					"cursor_sizeunit" : 0,
