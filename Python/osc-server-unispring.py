@@ -45,7 +45,8 @@ def init_unispring(addrs, args, max_dir):
     corpus = usp.Corpus(directory + '/corpus.json',
     region, descX, descY, plot=False)
     print('uniformization...')
-    corpus.unispringUniform(1, 0.01, 0.02, limit=300)
+    limit = min(1000, max(200, len(corpus.getAllPoints())))
+    corpus.unispringUniform(1, 0.01, 0.02, limit=limit)
     print('export')
     corpus.exportJson(directory + '/remap.json')
     args[1]['corpus1'] = corpus
