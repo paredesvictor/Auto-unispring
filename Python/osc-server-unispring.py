@@ -2,6 +2,7 @@ import argparse
 import sys
 from copy import deepcopy
 import unispring as usp
+from random import random
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
@@ -26,6 +27,30 @@ def update_unispring(addrs, args, *coord):
         except:
             n += 1
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
+    region = usp.RegionPolygon(vertices)
+    temp_corpus.region = region
+    temp_corpus.unispringUniform(1, 0.01, 0.02, limit=200*(len(vertices)/4))
+    print('export')
+    save_dir = args[1]['dir']
+    temp_corpus.exportJson(save_dir+'/remap.json')
+    args[0].send_message("/unispring", save_dir)
+    print('waiting...')
+
+def update_unispring_rand(addrs, args, *coord):
+    print('random update...')
+    n = 1
+    while True:
+        try:
+            with recursion_depth(1000*n):
+                temp_corpus = deepcopy(args[1]["corpus1"])
+            break
+        except:
+            n += 1
+    pt1 = (random()*0.5,random()*0.5)
+    pt2 = (random()*0.5+0.5,random()*0.5)
+    pt3 = (random()*0.5+0.5,random()*0.5+0.5)
+    pt4 = (random()*0.5,random()*0.5+0.5)
+    vertices = [pt1, pt2, pt3, pt4]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
     temp_corpus.unispringUniform(1, 0.01, 0.02, limit=200*(len(vertices)/4))
@@ -70,6 +95,7 @@ if __name__ == "__main__":
     
     corpus = {}
     dispatcher = dispatcher.Dispatcher()
+    dispatcher.map("/region_rand", update_unispring_rand, client, corpus)
     dispatcher.map("/region", update_unispring, client, corpus)
     dispatcher.map("/unispring", init_unispring, client, corpus)
     
