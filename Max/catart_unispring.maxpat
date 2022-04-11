@@ -614,7 +614,6 @@
 , 											{
 												"box" : 												{
 													"id" : "obj-89",
-													"int" : 1,
 													"maxclass" : "gswitch2",
 													"numinlets" : 2,
 													"numoutlets" : 2,
@@ -975,12 +974,12 @@
 									"cursor_nearest" : 0,
 									"cursor_nearestcolor" : [ 1.0, 0.0, 0.0, 1.0 ],
 									"cursor_noringoffset" : 0,
-									"cursor_position" : 0.955823293172691,
+									"cursor_position" : -1.0,
 									"cursor_shape" : "circle",
 									"cursor_size" : 25,
 									"cursor_sizeunit" : 0,
 									"cursor_visible" : 1,
-									"domain_bounds" : [ 0.0, 1.0 ],
+									"domain_bounds" : [ 0.0, 0.0 ],
 									"domainruler_bgcolor" : [ 1.0, 1.0, 1.0, 0.0 ],
 									"domainruler_fgcolor" : [ 0.0, 0.0, 0.0, 1.0 ],
 									"domainruler_grid" : 0,
@@ -1882,7 +1881,7 @@
 						}
 ,
 						"classnamespace" : "box",
-						"rect" : [ 931.0, 525.0, 665.0, 240.0 ],
+						"rect" : [ 374.0, 206.0, 699.0, 946.0 ],
 						"bglocked" : 0,
 						"openinpresentation" : 0,
 						"default_fontsize" : 12.0,
@@ -1910,6 +1909,7 @@
 						"style" : "",
 						"subpatcher_template" : "",
 						"assistshowspatchername" : 0,
+						"visible" : 1,
 						"boxes" : [ 							{
 								"box" : 								{
 									"comment" : "",
@@ -2465,7 +2465,7 @@
 									"patching_rect" : [ 37.5, 125.0, 68.0, 22.0 ],
 									"saved_object_attributes" : 									{
 										"embed" : 0,
-										"externalfiles" : 1,
+										"externalfiles" : 0,
 										"parameter_enable" : 0,
 										"parameter_mappable" : 0,
 										"resamplefiles" : 0,
@@ -10769,7 +10769,6 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-25",
-									"int" : 1,
 									"maxclass" : "gswitch2",
 									"numinlets" : 2,
 									"numoutlets" : 2,
@@ -10782,7 +10781,6 @@
 , 							{
 								"box" : 								{
 									"id" : "obj-24",
-									"int" : 1,
 									"maxclass" : "gswitch2",
 									"numinlets" : 2,
 									"numoutlets" : 2,
@@ -13354,12 +13352,12 @@
 					"cursor_nearest" : 0,
 					"cursor_nearestcolor" : [ 1.0, 0.0, 0.0, 1.0 ],
 					"cursor_noringoffset" : 0,
-					"cursor_position" : 0.955823293172691,
+					"cursor_position" : -1.0,
 					"cursor_shape" : "circle",
 					"cursor_size" : 25,
 					"cursor_sizeunit" : 0,
 					"cursor_visible" : 1,
-					"domain_bounds" : [ 0.0, 1.0 ],
+					"domain_bounds" : [ 0.0, 0.0 ],
 					"domainruler_bgcolor" : [ 1.0, 1.0, 1.0, 0.0 ],
 					"domainruler_fgcolor" : [ 0.0, 0.0, 0.0, 1.0 ],
 					"domainruler_grid" : 0,

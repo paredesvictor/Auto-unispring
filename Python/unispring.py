@@ -1,7 +1,6 @@
 #%%
 """
 Created on Wed Feb 23 13:58:22 2022
-
 @author: victorparedes
 """
 # Import
@@ -47,26 +46,13 @@ class Corpus():
         self.is_norm = False
         self.region = region
         # point extractions from choice of axis
-        self.extractPoints(descrX, descrY)
+        for buffer in self.buffers:
+            buffer.extractPoints(descrX, descrY)
+        # plot
         if plot:
             self.plot()
         self.normalize()
         self.preUniformization()
-    
-    def extractPoints(self, descrNameX, descrNameY):
-        '''
-        Create points by extracting 2 descriptors from the descriptor matrix,
-        one for X, one for Y. Does this for each buffer.
-
-        Parameters
-        ----------
-        descrNameX : int
-            index of the descriptor for X.
-        descrNameY : int
-            index of the descriptor for Y.
-        '''
-        for buffer in self.buffers:
-            buffer.extractPoints(descrNameX, descrNameY)
     
     def getAllPoints(self):
         allPoints = []
@@ -90,13 +76,6 @@ class Corpus():
         for buffer in self.buffers:
             buffer.normalize(upperX, lowerX, upperY, lowerY)
         self.is_norm = True
-        
-    def meanDistance(self):
-        d = 0
-        for point in self.getAllPoints():
-            for near in point.near:
-                d += point.distTo(near)
-        return d / (2 * len(self.getAllPoints()))
             
     def preUniformization(self, resize=False, og=(0,0), s = 1, inSquareAuto=False):
         '''
@@ -183,7 +162,16 @@ class Corpus():
             if p2 not in p3.near:
                 p3.near.append(p2)
                 p2.near.append(p3)
-        
+    
+    def l0(self):
+        h2 = 0
+        for point in self.getAllPoints():
+            for nearPoint in point.near:
+                h2 += 1
+        #print(l2/2)
+        #print(h2/2)
+        return 2*self.region.getArea() / h2
+
     def unispringUniform(self, k, minDist, maxDist, plotPeriod=0, limit=0):
         '''
         Perform a distribution of the corpus points in the user-defined region
@@ -211,21 +199,19 @@ class Corpus():
         # first triangulation
         self.delaunayTriangulation()
         self.preUniformization(resize=True, inSquareAuto=True)
-        allPoints = []
-        for buffer in self.buffers:
-            allPoints += buffer.points
-        nbPoints = len(allPoints)
-        # l0 is calculated for a uniform target distribution with all 
-        # delaunay triangles becoming equilateral, does not account for points 
-        # on the borders
-        uniform_density = nbPoints / self.region.getArea()
-        l0 = sqrt(2/(sqrt(3)*uniform_density))
+        allPoints = self.getAllPoints()
         exit = False
         count= 0
+
         while not exit:
             exit = True
             count += 1
             updateTri = False
+            
+            uniform_density = len(allPoints) / self.region.getArea()
+            l0 = sqrt(2/(sqrt(3)*uniform_density))
+            #l0 = 10 * self.l0()
+            #print(l0)
             for point in allPoints:
                 for nearPoint in point.near:
                     f = k * (l0 - point.distTo(nearPoint))
@@ -341,6 +327,7 @@ class Buffer():
         data['tracks'][1]['buffers'][self.id]['mxData'] = updateVals
         data['tracks'][1]['buffers'][self.id]['mxCols'] += 2
         
+
 class Point():
     
     def __init__(self, x, y):
@@ -407,6 +394,7 @@ class BorderPoint(Point):
     def __eq__(self, pt):
         return self.x == pt.x and self.y == pt.y
         
+
 class RegionPolygon():
     
     def __init__(self, lstVertices):
@@ -505,6 +493,7 @@ class RegionPolygon():
         if show:
             plt.show()
             
+
 class Edge():
     
     def __init__(self, p1, p2):
@@ -581,8 +570,7 @@ class RegionCircle():
 if __name__ == '__main__':
     ## region building --> trigonometric rotation !
     vertices = ((0,0),(1,0),(1,1),(0,1))
-    coord = "0.2919999957084656 0.7099999785423279 0.671999990940094 0.7139999866485596 0.6399999856948853 0.2939999997615814 0.3160000145435333 0.2919999957084656 0.7239999771118164 0.7279999852180481 0.7059999704360962 0.25600001215934753 0.2540000081062317 0.272000014781951".split(' ')
-    vertices2 = [(int(coord[i]),1-int(coord[i+1])) for i in range(0,len(coord),2)]
+    vertices2 = ((0.1,0.1),(0.8,0.2),(0.8,0.6),(0.6,0.5),(0.05,0.68))
     regionSquare = RegionPolygon(vertices)
     regionPoly = RegionPolygon(vertices2)
     regionCircle = RegionCircle(0.5,0.5,0.5)
@@ -597,9 +585,8 @@ if __name__ == '__main__':
 
     ## pre-uniformization
     corpus.plot()
-    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
+    corpus.unispringUniform(1, 0.001, 0.02, plotPeriod=0)
     corpus.plot()
-    regionPoly.plot()
 #%%
     corpus.region = regionPoly
     corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
