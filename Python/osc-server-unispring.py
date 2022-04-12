@@ -3,7 +3,6 @@ import sys
 import os
 from copy import deepcopy
 import unispring as usp
-from random import random
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
