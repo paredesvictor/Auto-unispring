@@ -1,5 +1,6 @@
 import argparse
 import sys
+import os
 from copy import deepcopy
 import unispring as usp
 from random import random
@@ -32,36 +33,13 @@ def update_unispring(addrs, args, *coord):
     temp_corpus.unispringUniform(1, 0.01, 0.02, limit=200*(len(vertices)/4))
     print('export')
     save_dir = args[1]['dir']
-    temp_corpus.exportJson(save_dir+'/remap.json')
+    directory = os.path.dirname(os.path.realpath(__file__))
+    temp_corpus.exportJson(directory+'/remap.json')
     args[0].send_message("/unispring", save_dir)
     print('waiting...')
 
-def update_unispring_rand(addrs, args, *coord):
-    print('random update...')
-    n = 1
-    while True:
-        try:
-            with recursion_depth(1000*n):
-                temp_corpus = deepcopy(args[1]["corpus1"])
-            break
-        except:
-            n += 1
-    pt1 = (random()*0.5,random()*0.5)
-    pt2 = (random()*0.5+0.5,random()*0.5)
-    pt3 = (random()*0.5+0.5,random()*0.5+0.5)
-    pt4 = (random()*0.5,random()*0.5+0.5)
-    vertices = [pt1, pt2, pt3, pt4]
-    region = usp.RegionPolygon(vertices)
-    temp_corpus.region = region
-    temp_corpus.unispringUniform(1, 0.01, 0.02, limit=200*(len(vertices)/4))
-    print('export')
-    save_dir = args[1]['dir']
-    temp_corpus.exportJson(save_dir+'/remap.json')
-    args[0].send_message("/unispring", save_dir)
-    print('waiting...')
-
-def init_unispring(addrs, args, max_dir):
-    directory = '/' + max_dir.replace(' ','')
+def init_unispring(addrs, args, max_path):
+    directory = os.path.dirname(os.path.realpath(__file__))
     print('Creating corpus and region')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     descX = "CentroidMean"
@@ -95,7 +73,6 @@ if __name__ == "__main__":
     
     corpus = {}
     dispatcher = dispatcher.Dispatcher()
-    dispatcher.map("/region_rand", update_unispring_rand, client, corpus)
     dispatcher.map("/region", update_unispring, client, corpus)
     dispatcher.map("/unispring", init_unispring, client, corpus)
     
