@@ -4,40 +4,60 @@ from pythonosc import udp_client
 import argparse
 import numpy as np
 
-def normalize(array):
-    return 
+def normalize(table):
+    n_descr = len(table[0])
+    normalized_table = []
+    list_min = [float('inf') for i in range(n_descr)]
+    list_max = [float('-inf') for i in range(n_descr)]
+    for line in table:
+        for i in range(1,n_descr):
+            if line[i] < list_min[i]:
+                list_min[i] = line[i]
+            elif line[i] > list_max[i]:
+                list_max[i] = line[i]
+    for line in table:
+        new_line = [line[0]]
+        for i in range(1,n_descr):
+            new_line.append((line[i]-list_min[i])/(list_max[i]-list_min[i]))
+        normalized_table.append(new_line)
+    return normalized_table
 
 def add_line(addrs, args, *message):
     index = int(message[-2])
     buffer = str(message[-1])
-    n_descr = len(message)-3
-    descriptors = [message[i+1] for i in range(n_descr)]
-    args[1][buffer][index] = descriptors
+    n_descr = len(message)-2
+    descriptors = [message[i] for i in range(n_descr)]
+    args[1]['buffer'][buffer][index] = descriptors
     #args[0].send_message('/callback', truc)
 
 def add_buffer(addrs, args, *message):
-    print(message)
-    n_cols = int(message[1])
+    n_cols = int(message[2])
     n_rows = int(message[0])
-    buffer = str(message[2])
-    args[1][buffer] = [[] for j in range(n_rows)]
-
-def show(addrs, args, key):
-    print(args[1][str(key)])
+    buffer = str(message[1])
+    args[1]['buffer'][buffer] = [[] for j in range(n_rows)]
 
 def eval_str(addrs, args, eval_string):
     eval(eval_string)
 
 def reset_track(addrs, args, *unused):
-    args[1]['from_max'] = []
+    args[1]['buffer'] = {}
 
-def import_track(addrs, args, *unused):
-    track = [np.asarray(buffer) for buffer in args[1]['from_max']]
-    args[1]['track'] = [normalize(buf) for buf in track]
-    track0 = args[1]['track'][0]
-    print(track0[0,0])
-    track1 = args[1]['track'][1]
-    print(track1[0,0])
+def dumpdone(addrs, args, buffer):
+    n_lines = len(args[1]['buffer'][str(buffer)])
+    print('done importing buffer ', buffer, ', ',n_lines, ' grains.' )
+
+def create_norm_track(addrs, args, *unused):
+    args[1]['norm_buffer'] = {}
+    for key, buffer in args[1]['buffer'].items():
+        args[1]['norm_buffer'][key] = normalize(buffer)
+    print('done normalizing')
+
+def write_norm_track(addrs, args, *unused):
+    tracks = args[1]['norm_buffer']
+    for idx_buffer, track in tracks.items():
+        args[0].send_message('/buffer_index', int(idx_buffer))
+        for i,line in enumerate(track):
+            args[0].send_message('/append', line)
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -52,15 +72,16 @@ if __name__ == "__main__":
     parser_server.add_argument("--port", type=int, default=8011)
     args_server = parser_server.parse_args()
     
-    global_hash = {'from_max':[]}
+    global_hash = {'buffer':{}}
     dispatcher = dispatcher.Dispatcher()
     dispatcher.map("/add_line", add_line, client, global_hash)
     dispatcher.map("/add_buffer", add_buffer, client, global_hash)
-    dispatcher.map("/import_track", import_track, client, global_hash)
-    dispatcher.map("/print", print)
-    dispatcher.map("/show", show, client, global_hash)
-    dispatcher.map("/eval", eval_str, client, global_hash)
+    dispatcher.map("/create_norm_track", create_norm_track, client, global_hash)
+    dispatcher.map("/write_norm_track", write_norm_track, client, global_hash)
     dispatcher.map("/reset_track", reset_track, client, global_hash)
+    dispatcher.map("/dumpdone", dumpdone, client, global_hash)
+    dispatcher.map("/print", print)
+    dispatcher.map("/eval", eval_str, client, global_hash)
     
     server = osc_server.ThreadingOSCUDPServer(
         (args_server.ip, args_server.port), dispatcher)
