@@ -3,24 +3,28 @@ from pythonosc import osc_server
 from pythonosc import udp_client
 import argparse
 import numpy as np
+import unispring as usp
 
-def normalize(table):
-    n_descr = len(table[0])
-    normalized_table = []
+def normalize(track):
+    n_descr = len(track['1'][0])
+    norm_track = {}
     list_min = [float('inf') for i in range(n_descr)]
     list_max = [float('-inf') for i in range(n_descr)]
-    for line in table:
-        for i in range(1,n_descr):
-            if line[i] < list_min[i]:
-                list_min[i] = line[i]
-            elif line[i] > list_max[i]:
-                list_max[i] = line[i]
-    for line in table:
-        new_line = [line[0]]
-        for i in range(1,n_descr):
-            new_line.append((line[i]-list_min[i])/(list_max[i]-list_min[i]))
-        normalized_table.append(new_line)
-    return normalized_table
+    for key, table in track.items():
+        for line in table:  
+            for i in range(1,n_descr):
+                if line[i] < list_min[i]:
+                    list_min[i] = line[i]
+                elif line[i] > list_max[i]:
+                    list_max[i] = line[i]
+    for key, table in track.items():
+        norm_track[key] = []
+        for line in table:
+            new_line = [line[0]]
+            for i in range(1,n_descr):
+                new_line.append((line[i]-list_min[i])/(list_max[i]-list_min[i]))
+            norm_track[key].append(new_line)
+    return norm_track
 
 def add_line(addrs, args, *message):
     index = int(message[-2])
@@ -48,16 +52,23 @@ def dumpdone(addrs, args, buffer):
 
 def create_norm_track(addrs, args, *unused):
     args[1]['norm_buffer'] = {}
-    for key, buffer in args[1]['buffer'].items():
-        args[1]['norm_buffer'][key] = normalize(buffer)
+    args[1]['norm_buffer'] = normalize(args[1]['buffer'])
     print('done normalizing')
 
 def write_norm_track(addrs, args, *unused):
-    tracks = args[1]['norm_buffer']
-    for idx_buffer, track in tracks.items():
+    for idx_buffer, track in args[1]['norm_buffer'].items():
         args[0].send_message('/buffer_index', int(idx_buffer))
         for i,line in enumerate(track):
             args[0].send_message('/append', line)
+    print('done exporting normalized buffers')
+
+def unispring(addrs, args, *descr):
+    vertices = ((0,0),(1,0),(1,1),(0,1))
+    region = usp.RegionPolygon(vertices)
+    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0], descr[1])
+    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=0, client=args[0])
+    print('uniformization done')
+    args[1]['corpus'].exportToMax(args[0])
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -80,6 +91,7 @@ if __name__ == "__main__":
     dispatcher.map("/write_norm_track", write_norm_track, client, global_hash)
     dispatcher.map("/reset_track", reset_track, client, global_hash)
     dispatcher.map("/dumpdone", dumpdone, client, global_hash)
+    dispatcher.map("/unispring", unispring, client, global_hash)
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
     

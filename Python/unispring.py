@@ -1,21 +1,16 @@
-#%%
 """
 Created on Wed Feb 23 13:58:22 2022
 
 @author: victorparedes
 """
 # Import
-import json
-import matplotlib.pyplot as plt
 from scipy.spatial import Delaunay, ConvexHull, KDTree
 from numpy import arctan2, sqrt, sin, cos, asarray, degrees
 from math import pi
-
-plt.rcParams['figure.dpi'] = 100
     
 class Corpus():
     
-    def __init__(self, fileName, region, descrX, descrY, plot=False):
+    def __init__(self, track, region, descrX, descrY):
         '''
         Take a json file from mubu and initialise a corpus by extracting 
         descriptors from the second track (can manage multiple buffers).
@@ -29,44 +24,15 @@ class Corpus():
             the user-defined region in which the points will be scattered.
         '''
         # import json
-        with open(fileName, 'r') as dataFile:
-            rawData = dataFile.read()
-        self.data = json.loads(rawData)
-        descr = self.data['tracks'][1]
-        descrNames = descr['mxColNames']
         # descriptors extraction
         self.buffers = []
-        for i in range(len(descr['buffers'])):
-            bufferDescr = {}
-            nbPts = len(descr['buffers'][i]['mxData'])
-            for j,name in enumerate(descrNames):
-                descrData = descr['buffers'][i]['mxData']
-                bufferDescr[name] = descrData[j:nbPts:len(descrNames)]
-            self.buffers.append(Buffer(bufferDescr, i))
+        for key,buffer in track.items():
+            self.buffers.append(Buffer(buffer, descrX, descrY, int(key)))
         # initialize normalize bool
         self.is_norm = False
         self.region = region
-        # point extractions from choice of axis
-        self.extractPoints(descrX, descrY)
-        if plot:
-            self.plot()
         self.normalize()
         self.preUniformization()
-    
-    def extractPoints(self, descrNameX, descrNameY):
-        '''
-        Create points by extracting 2 descriptors from the descriptor matrix,
-        one for X, one for Y. Does this for each buffer.
-
-        Parameters
-        ----------
-        descrNameX : int
-            index of the descriptor for X.
-        descrNameY : int
-            index of the descriptor for Y.
-        '''
-        for buffer in self.buffers:
-            buffer.extractPoints(descrNameX, descrNameY)
     
     def getAllPoints(self):
         allPoints = []
@@ -184,7 +150,7 @@ class Corpus():
                 p3.near.append(p2)
                 p2.near.append(p3)
         
-    def unispringUniform(self, k, minDist, maxDist, plotPeriod=0, limit=0):
+    def unispringUniform(self, k, minDist, maxDist, exportPeriod=0, client=None, limit=0):
         '''
         Perform a distribution of the corpus points in the user-defined region
         using a spring-mass physical model.
@@ -247,77 +213,30 @@ class Corpus():
                     self.plot(tri=True)
                     print('error')
                     exit = True
-            if plotPeriod != 0  and count%plotPeriod == 0:
-                self.plot(tri=False)
+            if exportPeriod != 0  and count%exportPeriod == 0:
+                self.exportToMax(client)
             if limit != 0 and count > limit:
                 print('forced exit')
                 exit = True
         return count
-            
-    def plot(self, tri=False, show=True):
-        '''
-        Plot a graph of the corpus points.
-
-        Parameters
-        ----------
-        tri : bool, optional
-            display Delaunay trinagulation. The default is False.
-        show : bool, optional
-            show immediately. The default is True.
-        '''
-        for buffer in self.buffers :
-            pointsX = [point.x for point in buffer.points]
-            pointsY = [point.y for point in buffer.points]
-            fig = plt.scatter(pointsX, pointsY, s = 8)
-        if self.is_norm:
-            if tri:
-                allPoints = []
-                for buffer in self.buffers:
-                    allPoints += buffer.points
-                for point in allPoints:
-                    for nearPoint in point.near:
-                        segX = [point.x, nearPoint.x]
-                        segY = [point.y, nearPoint.y]
-                        plt.plot(segX, segY, color='black',
-                                 linestyle='dashed', linewidth = 1,
-                                 alpha = 0.3)
-            fig.set_cmap('hot')
-            fig.axes.get_xaxis().set_visible(False)
-            fig.axes.get_yaxis().set_visible(False)
-            fig.axes.set_aspect('equal')
-            fig.axes.set_xlim([-0.1,1.1])
-            fig.axes.set_ylim([-0.1,1.1])
-        else:
-            fig.axes.set_aspect('auto')
-        if show:
-            plt.show()
     
-    def exportJson(self, name):
-        '''
-        Export the corpus into a new json file with added descriptors 
-        corresponding to the new distribution.
-        '''
-        descr = self.data['tracks'][1]
-        descr['mxColNames'].append('unispringX')
-        descr['mxColNames'].append('unispringY')
+    def exportToMax(self, client):
         for buffer in self.buffers:
-            buffer.updateJson(self.data, descr['mxCols'])
-        descr['mxCols'] += 2
-        with open(name, 'w') as file:
-            json.dump(self.data, file, indent=2)
+            client.send_message('/buffer_index', buffer.id)
+            uniX = [point.x for point in buffer.points]
+            uniY = [point.y for point in buffer.points]
+            client.send_message('/matrixcol', 7)
+            client.send_message('/set_matrix', [0] + uniX)
+            client.send_message('/matrixcol', 8)
+            client.send_message('/set_matrix', [0] + uniY)
+            client.send_message('/refresh', 1)
         
         
 class Buffer():
     
-    def __init__(self, descr, nbId):
+    def __init__(self, descr, idxX, idxY, nbId):
         self.id = nbId
-        self.descr = descr
-        self.points = []
-    
-    def extractPoints(self, descrNameX, descrNameY):
-        descrX = self.descr[descrNameX]
-        descrY = self.descr[descrNameY]
-        self.points = [Point(descrX[i], descrY[i]) for i in range(len(descrX))]
+        self.points = [Point(grain[idxX],grain[idxY]) for grain in descr]
         
     def normalize(self, upperX, lowerX, upperY, lowerY):
         widthX = upperX - lowerX
@@ -325,21 +244,6 @@ class Buffer():
         for point in self.points:
             point.x = (point.x - lowerX) / widthX
             point.y = (point.y - lowerY) / widthY
-    
-    def updateJson(self, data, nbDescr):
-        allCoord = []
-        for point in self.points:
-            allCoord.append([point.x, point.y])
-        vals = data['tracks'][1]['buffers'][self.id]['mxData']
-        
-        updateVals = []
-        for i in range(len(vals)):
-            updateVals.append(vals[i])
-            if i%nbDescr == 6:
-                updateVals.append(float(allCoord[i//nbDescr][0]))
-                updateVals.append(float(allCoord[i//nbDescr][1]))
-        data['tracks'][1]['buffers'][self.id]['mxData'] = updateVals
-        data['tracks'][1]['buffers'][self.id]['mxCols'] += 2
         
 class Point():
     
@@ -487,23 +391,6 @@ class RegionPolygon():
         isIn1 = closestPoints[0].edge.isRightSide(pt)
         isIn2 = closestPoints[1].edge.isRightSide(pt)  
         return isIn1 and isIn2, closestPoints[0]
-
-    def plot(self, show=True, pltBbox=False):
-        pointsX = [point.x for point in self.points]
-        pointsY = [point.y for point in self.points]
-        fig = plt.scatter(pointsX, pointsY, s = 8)
-        fig.set_cmap('hot')
-        fig.axes.get_xaxis().set_visible(False)
-        fig.axes.get_yaxis().set_visible(False)
-        fig.axes.set_aspect('equal')
-        fig.axes.set_xlim([-0.1,1.1])
-        fig.axes.set_ylim([-0.1,1.1])
-        if pltBbox:
-            p1, p2 = self.getBoundingBox()
-            rectangle = plt.Rectangle((p1.x,p1.y), p2.x-p1.x, p2.y-p1.y, fc='none', ec="red")
-            fig.axes.add_patch(rectangle)
-        if show:
-            plt.show()
             
 class Edge():
     
@@ -559,52 +446,6 @@ class RegionCircle():
         origin.y = self.radius * sin(angle) + self.center.y
         side = 2 * self.radius / sqrt(2)
         return side, origin
-    
-    def plot(self, show=True, pltBbox=False):
-        circle = plt.Circle((self.center.x,self.center.y),
-                            self.radius, fill=False)
-        fig = plt.scatter(self.center.x,self.center.y,marker='x')
-        fig.set_cmap('hot')
-        fig.axes.get_xaxis().set_visible(False)
-        fig.axes.get_yaxis().set_visible(False)
-        fig.axes.set_aspect('equal')
-        fig.axes.set_xlim([-0.1,1.1])
-        fig.axes.set_ylim([-0.1,1.1])
-        fig.axes.add_patch(circle)
-        if pltBbox:
-            p1, p2 = self.getBoundingBox()
-            rectangle = plt.Rectangle((p1.x,p1.y), p2.x-p1.x, p2.y-p1.y, fc='none', ec="red")
-            fig.axes.add_patch(rectangle)
-        if show:
-            plt.show()
 
 if __name__ == '__main__':
-    ## region building --> trigonometric rotation !
-    vertices = ((0,0),(1,0),(1,1),(0,1))
-    coord = "0.2919999957084656 0.7099999785423279 0.671999990940094 0.7139999866485596 0.6399999856948853 0.2939999997615814 0.3160000145435333 0.2919999957084656 0.7239999771118164 0.7279999852180481 0.7059999704360962 0.25600001215934753 0.2540000081062317 0.272000014781951".split(' ')
-    vertices2 = [(int(coord[i]),1-int(coord[i+1])) for i in range(0,len(coord),2)]
-    regionSquare = RegionPolygon(vertices)
-    regionPoly = RegionPolygon(vertices2)
-    regionCircle = RegionCircle(0.5,0.5,0.5)
-    
-    region = regionSquare
-    
-    ## corpus creation
-    descX = 'CentroidMean'
-    descY = 'PeriodicityMean'
-    corpus = Corpus('/Users/victorparedes/Documents/GitHub/Auto-unispring/corpus.json',
-    region, descX, descY, plot=True)
-
-    ## pre-uniformization
-    corpus.plot()
-    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
-    corpus.plot()
-    regionPoly.plot()
-#%%
-    corpus.region = regionPoly
-    corpus.unispringUniform(1, 0.02, 0.01, plotPeriod=0)
-    corpus.plot()
-
-
-    ## export final corpus to json
-    #corpus.exportJson('data_sympoiesis_uni.json')
+    print('AH')
