@@ -7,22 +7,11 @@ Created on Wed Feb 23 13:58:22 2022
 from scipy.spatial import Delaunay, ConvexHull, KDTree
 from numpy import arctan2, sqrt, sin, cos, asarray, degrees
 from math import pi
-    
+
+
 class Corpus():
     
     def __init__(self, track, region, descrX, descrY):
-        '''
-        Take a json file from mubu and initialise a corpus by extracting 
-        descriptors from the second track (can manage multiple buffers).
-
-        Parameters
-        ----------
-        fileName : string
-            path to the json file created by mubu, the file must have at least
-            2 tracks with the second one containing sound descriptors.
-        region : Region object
-            the user-defined region in which the points will be scattered.
-        '''
         # import json
         # descriptors extraction
         self.buffers = []
@@ -41,9 +30,6 @@ class Corpus():
         return allPoints
         
     def normalize(self):
-        '''
-        Normalize the points to ([0,1],[0,1])
-        '''
         pointsX = []
         pointsY = []
         for buffer in self.buffers:
@@ -65,20 +51,6 @@ class Corpus():
         return d / (2 * len(self.getAllPoints()))
             
     def preUniformization(self, resize=False, og=(0,0), s = 1, inSquareAuto=False):
-        '''
-        Distribute points in the bounding box of the region.
-
-        Parameters
-        ----------
-        resize : bool, optional
-            just move the points in the destination box, no sort. The default is False
-        og : tuple, optional
-            origin of the square (bottom-left). The default is (0,0).
-        s : float, optional
-            length of the side of the square. The default is 1.
-        inSquareAuto : bool, optional
-            autocalculate the bounding box of the region. The default is False.
-        '''
         if inSquareAuto:
             p1, p2 = self.region.getBoundingBox()
             sideX, sideY, origin = p2.x-p1.x, p2.y-p1.y, p1
@@ -103,10 +75,6 @@ class Corpus():
                 allPoints[i].y = allPoints[i].y * sideY + origin.y
         
     def delaunayTriangulation(self):
-        '''
-        Perform a Delaunay triangulation on all points using
-        scipy.spatial toolkit.
-        '''
         allCoord = []
         for buffer in self.buffers:
             allCoord += [[pt.x, pt.y] for pt in buffer.points]
@@ -122,14 +90,6 @@ class Corpus():
         return convexHull
     
     def updateNearPoints(self, triangulation):
-        '''
-        Update neighboors of each point in the corpus after triangulation
-
-        Parameters
-        ----------
-        triangulation : triangulation
-            Triangulation obtained using scipy.spatial toolkit.
-        '''
         allPoints = []
         for buffer in self.buffers:
             for point in buffer.points:
@@ -151,29 +111,6 @@ class Corpus():
                 p2.near.append(p3)
         
     def unispringUniform(self, k, minDist, maxDist, exportPeriod=0, client=None, limit=0):
-        '''
-        Perform a distribution of the corpus points in the user-defined region
-        using a spring-mass physical model.
-        
-
-        Parameters
-        ----------
-        k : float
-            stiffness of the spring mass assuming a uniform mass of 1.
-        minDist : float
-            The target minimal displacement of all the points used as an exit 
-            condition.
-        maxDist : float
-            The maximal displacement above which the triangulation is updated.
-        plotPeriod : bool, optional
-            Number of steps before plotting a graph. The default is 0 (no plot).
-
-        Returns
-        -------
-        count : int
-            The total number of steps it took to reach minimal displacement
-            condtion.
-        '''
         # first triangulation
         self.delaunayTriangulation()
         self.preUniformization(resize=True, inSquareAuto=True)
@@ -221,6 +158,7 @@ class Corpus():
         return count
     
     def exportToMax(self, client):
+        print('exporting')
         for buffer in self.buffers:
             client.send_message('/buffer_index', buffer.id)
             uniX = [point.x for point in buffer.points]
@@ -230,8 +168,8 @@ class Corpus():
             client.send_message('/matrixcol', 8)
             client.send_message('/set_matrix', [0] + uniY)
             client.send_message('/refresh', 1)
-        
-        
+
+
 class Buffer():
     
     def __init__(self, descr, idxX, idxY, nbId):
@@ -244,7 +182,8 @@ class Buffer():
         for point in self.points:
             point.x = (point.x - lowerX) / widthX
             point.y = (point.y - lowerY) / widthY
-        
+
+
 class Point():
     
     def __init__(self, x, y):
@@ -287,10 +226,8 @@ class Point():
         self.near = []
         
     def moveTo(self, pt):
-        # add a random displacement around bounds to avoid points overlap
-        # when moved to bounds
-        nextX = pt.x #+ random() * 0.0001
-        nextY = pt.y #+ random() * 0.0001
+        nextX = pt.x
+        nextY = pt.y
         self.pushX = nextX - self.x
         self.pushY = nextY - self.y
     
@@ -302,6 +239,7 @@ class Point():
         y = point.y - self.y
         return arctan2(y,x)
 
+
 class BorderPoint(Point):
     
     def __init__(self, x, y, edge):
@@ -310,19 +248,20 @@ class BorderPoint(Point):
     
     def __eq__(self, pt):
         return self.x == pt.x and self.y == pt.y
-        
+
+
 class RegionPolygon():
     
-    def __init__(self, lstVertices):
+    def __init__(self, lstVertices, density=50):
         self.vertices = []
         self.edges = []
         self.points = []
         self.tree = None
         self.addVertices(lstVertices)
-        self.calculateBorders()
+        self.calculateBorders(density)
         self.generateTree()
     
-    def calculateBorders(self, density=50):
+    def calculateBorders(self, density):
         self.points = []
         for edge in self.edges:
             self.points += edge.segment(density)
@@ -391,7 +330,8 @@ class RegionPolygon():
         isIn1 = closestPoints[0].edge.isRightSide(pt)
         isIn2 = closestPoints[1].edge.isRightSide(pt)  
         return isIn1 and isIn2, closestPoints[0]
-            
+
+
 class Edge():
     
     def __init__(self, p1, p2):
@@ -413,6 +353,7 @@ class Edge():
         refAngle = arctan2(ref.y - og.y, ref.x - og.x)
         ptAngle = arctan2(pt.y - og.y, pt.x - og.x)
         return sin(refAngle - ptAngle) < 0.00001
+
 
 class RegionCircle():
     
@@ -446,6 +387,7 @@ class RegionCircle():
         origin.y = self.radius * sin(angle) + self.center.y
         side = 2 * self.radius / sqrt(2)
         return side, origin
+
 
 if __name__ == '__main__':
     print('AH')
