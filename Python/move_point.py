@@ -5,18 +5,12 @@ from copy import deepcopy, copy
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
-<<<<<<< Updated upstream
-
-
-def normalize(track):
-=======
 from sklearn.manifold import TSNE
 import matplotlib.pyplot as plt
 import json
 
 
 def MinMaxScale(track):
->>>>>>> Stashed changes
     n_descr = len(track['1'][0])
     norm_track = {}
     list_min = [float('inf') for i in range(n_descr)]
@@ -69,11 +63,7 @@ def dumpdone(addrs, args, buffer):
 
 def create_norm_track(addrs, args, *unused):
     args[1]['norm_buffer'] = {}
-<<<<<<< Updated upstream
-    args[1]['norm_buffer'] = normalize(args[1]['buffer'])
-=======
     args[1]['norm_buffer'] = MinMaxScale(args[1]['buffer'])
->>>>>>> Stashed changes
     print('done normalizing')
 
 
@@ -87,11 +77,7 @@ def write_norm_track(addrs, args, *unused):
 
 def init_unispring(addrs, args, *descr):
     vertices = ((0,0),(1,0),(1,1),(0,1))
-<<<<<<< Updated upstream
-    region = usp.RegionPolygon(vertices, density = 50)
-=======
     region = usp.RegionPolygon(vertices)
->>>>>>> Stashed changes
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0], descr[1])
     args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=0, client=args[0])
     print('uniformization done')
@@ -109,8 +95,6 @@ def update_unispring(addrs, args, *coord):
     temp_corpus.exportToMax(args[0])
 
 
-<<<<<<< Updated upstream
-=======
 def tSNE(addrs, args, perp):
     grains, b_id = [], []
     for buffer_id, buffer in args[1]['norm_buffer'].items():
@@ -126,7 +110,6 @@ def tSNE(addrs, args, perp):
     print('tsne done')
 
 
->>>>>>> Stashed changes
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
     parser_client.add_argument("--ip", default="127.0.0.1")
@@ -150,10 +133,7 @@ if __name__ == "__main__":
     dispatcher.map("/dumpdone", dumpdone, client, global_hash)
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
-<<<<<<< Updated upstream
-=======
     dispatcher.map("/tsne", tSNE, client, global_hash)
->>>>>>> Stashed changes
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
     
