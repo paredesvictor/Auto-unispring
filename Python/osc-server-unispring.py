@@ -1,13 +1,10 @@
 import argparse
 import numpy as np
 import unispring as usp
-from copy import deepcopy, copy
+from copy import deepcopy
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
-from sklearn.manifold import TSNE
-import matplotlib.pyplot as plt
-import json
 
 
 def MinMaxScale(track):
