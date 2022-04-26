@@ -84,7 +84,6 @@ def update_unispring(addrs, args, *coord):
     print('updating...')
     temp_corpus = deepcopy(args[1]["corpus"])
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
-    print(vertices)
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
     temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=200*(len(vertices)/4))
