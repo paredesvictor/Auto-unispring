@@ -83,12 +83,6 @@ class Corpus():
         self.updateNearPoints(triangulation)
         return triangulation
     
-    def convexHull(self):
-        allCoord = [[pt.x, pt.y] for pt in self.getAllPoints()]
-        allCoord = asarray(allCoord)
-        convexHull = ConvexHull(allCoord)
-        return convexHull
-    
     def updateNearPoints(self, triangulation):
         allPoints = []
         for buffer in self.buffers:
@@ -155,6 +149,8 @@ class Corpus():
             if limit != 0 and count > limit:
                 print('forced exit')
                 exit = True
+        for point in allPoints:
+            point.resetNear()
         return count
     
     def exportToMax(self, client):

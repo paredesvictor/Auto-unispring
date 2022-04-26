@@ -12,11 +12,13 @@ import json
 
 def MinMaxScale(track):
     n_descr = len(track['1'][0])
+    print([i for i,line in enumerate(track['1']) if line==[]])
+    print(n_descr)
     norm_track = {}
     list_min = [float('inf') for i in range(n_descr)]
     list_max = [float('-inf') for i in range(n_descr)]
     for key, table in track.items():
-        for line in table:  
+        for line in table:
             for i in range(1,n_descr):
                 if line[i] < list_min[i]:
                     list_min[i] = line[i]
@@ -45,7 +47,7 @@ def add_buffer(addrs, args, *message):
     n_cols = int(message[2])
     n_rows = int(message[0])
     buffer = str(message[1])
-    args[1]['buffer'][buffer] = [[] for j in range(n_rows)]
+    args[1]['buffer'][buffer] = [[0.0 for i in range(n_cols)] for j in range(n_rows)]
 
 
 def eval_str(addrs, args, eval_string):
@@ -79,18 +81,19 @@ def init_unispring(addrs, args, *descr):
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = usp.RegionPolygon(vertices)
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0], descr[1])
-    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=0, client=args[0])
+    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0])
     print('uniformization done')
     args[1]['corpus'].exportToMax(args[0])
 
 
 def update_unispring(addrs, args, *coord):
     print('updating...')
-    temp_corpus = copy(args[1]["corpus"])
+    temp_corpus = deepcopy(args[1]["corpus"])
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
+    print(vertices)
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
-    temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=0, client=args[0], limit=200*(len(vertices)/4))
+    temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=200*(len(vertices)/4))
     print('done updating')
     temp_corpus.exportToMax(args[0])
 
