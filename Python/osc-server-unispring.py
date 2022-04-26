@@ -115,7 +115,6 @@ if __name__ == "__main__":
     dispatcher.map("/dumpdone", dumpdone, client, global_hash)
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
-    dispatcher.map("/tsne", tSNE, client, global_hash)
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
     
