@@ -54,13 +54,12 @@ def reset_track(addrs, args, *unused):
 
 def dumpdone(addrs, args, buffer):
     n_lines = len(args[1]['buffer'][str(buffer)])
-    print('done importing buffer ', buffer, ', ',n_lines, ' grains.' )
+    print('buffer', buffer, ',',n_lines, 'grains...' )
 
 
 def create_norm_track(addrs, args, *unused):
     args[1]['norm_buffer'] = {}
     args[1]['norm_buffer'] = MinMaxScale(args[1]['buffer'])
-    print('done normalizing')
 
 
 def write_norm_track(addrs, args, *unused):
@@ -69,27 +68,27 @@ def write_norm_track(addrs, args, *unused):
         for i,line in enumerate(track):
             args[0].send_message('/append', line)
     args[0].send_message('/done_norm', 1)
-    print('done exporting normalized buffers')
+    print('----- Done')
 
 
 def init_unispring(addrs, args, *descr):
+    print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = usp.RegionPolygon(vertices)
-    print(descr[0],descr[1])
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
-    print(args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=500))
-    print('uniformization done')
+    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=500)
+    print('----- Done')
     args[1]['corpus'].exportToMax(args[0])
 
 
 def update_unispring(addrs, args, *coord):
-    print('updating...')
+    print('Update...')
     temp_corpus = deepcopy(args[1]["corpus"])
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
     temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=200*(len(vertices)/4))
-    print('done updating')
+    print('----- Done')
     temp_corpus.exportToMax(args[0])
 
 
@@ -122,5 +121,5 @@ if __name__ == "__main__":
     server = osc_server.ThreadingOSCUDPServer(
         (args_server.ip, args_server.port), dispatcher)
     print("Serving on {}".format(server.server_address))
-    print('waiting...')
+    print('----- Waiting')
     server.serve_forever()
