@@ -75,7 +75,6 @@ def write_norm_track(addrs, args, *unused):
 def init_unispring(addrs, args, *descr):
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = usp.RegionPolygon(vertices)
-    print(descr[0],descr[1])
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
     print(args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=500))
     print('uniformization done')
