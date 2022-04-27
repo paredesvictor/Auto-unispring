@@ -156,7 +156,6 @@ class Corpus():
         return count
     
     def exportToMax(self, client):
-        print('exporting')
         for buffer in self.buffers:
             client.send_message('/buffer_index', buffer.id)
             uniX = [point.x for point in buffer.points]
