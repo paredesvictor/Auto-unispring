@@ -15,9 +15,11 @@ class Corpus():
         # import json
         # descriptors extraction
         self.buffers = []
+        print(track['4'][10])
         for key,buffer in track.items():
             self.buffers.append(Buffer(buffer, descrX, descrY, int(key)))
         # initialize normalize bool
+        print(self.buffers[3].points[10].x, self.buffers[3].points[10].y)
         self.is_norm = False
         self.region = region
         self.normalize()
@@ -149,8 +151,8 @@ class Corpus():
             if limit != 0 and count > limit:
                 print('forced exit')
                 exit = True
-        for point in allPoints:
-            point.resetNear()
+        #for point in allPoints:
+            #point.resetNear()
         return count
     
     def exportToMax(self, client):
