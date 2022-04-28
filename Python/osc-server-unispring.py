@@ -39,7 +39,7 @@ def add_line(addrs, args, *message):
     if args[1]['remaining_lines'][buffer] == 0:
         print('buffer', buffer, ',',args[1]['nb_lines'][buffer], 'grains' )
         args[0].send_message('/next_buffer', 1)
-        end_test = [item==0 for i,item in args[1]['remaining_lines'].items()]
+        end_test = [item<=0 for i,item in args[1]['remaining_lines'].items()]
         len_test = args[1]['nb_buffer'] == len(end_test)
         if all(end_test) and len_test:
             args[0].send_message('/done_import', 1)
