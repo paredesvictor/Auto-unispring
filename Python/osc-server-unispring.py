@@ -1,5 +1,4 @@
 import argparse
-import numpy as np
 import unispring as usp
 from copy import deepcopy
 from pythonosc import dispatcher
@@ -35,6 +34,17 @@ def add_line(addrs, args, *message):
     n_descr = len(message)-2
     descriptors = [message[i] for i in range(n_descr)]
     args[1]['buffer'][buffer][index] = descriptors
+    args[1]['remaining_lines'][buffer] -= 1
+    args[1]['nb_lines'][buffer] += 1
+    if args[1]['remaining_lines'][buffer] == 0:
+        print('buffer', buffer, ',',args[1]['nb_lines'][buffer], 'grains' )
+        args[0].send_message('/next_buffer', 1)
+        end_test = [item==0 for i,item in args[1]['remaining_lines'].items()]
+        len_test = args[1]['nb_buffer'] == len(end_test)
+        if all(end_test) and len_test:
+            args[0].send_message('/done_import', 1)
+    if args[1]['nb_lines'][buffer] % args[1]['osc_batch_size'] == 0:
+        args[0].send_message('/next_batch', 1)
 
 
 def add_buffer(addrs, args, *message):
@@ -42,24 +52,29 @@ def add_buffer(addrs, args, *message):
     n_rows = int(message[0])
     buffer = str(message[1])
     args[1]['buffer'][buffer] = [[0.0 for i in range(n_cols)] for j in range(n_rows)]
+    args[1]['remaining_lines'][buffer] = n_rows
+    args[1]['nb_lines'][buffer] = 0
+    args[0].send_message('/start_dump', 1)
+
+
+def import_init(addrs, args, *message):
+    print('Export from Max...')
+    args[1]['buffer'] = {}
+    args[1]['osc_batch_size'] = int(message[1])
+    args[1]['nb_buffer'] = int(message[0])
+    args[1]['nb_lines'] = {}
+    args[1]['remaining_lines'] = {}
+    args[0].send_message('/begin_import', 1)
 
 
 def eval_str(addrs, args, eval_string):
     eval(eval_string)
 
 
-def reset_track(addrs, args, *unused):
-    args[1]['buffer'] = {}
-
-
-def dumpdone(addrs, args, buffer):
-    n_lines = len(args[1]['buffer'][str(buffer)])
-    print('buffer', buffer, ',',n_lines, 'grains...' )
-
-
 def create_norm_track(addrs, args, *unused):
     args[1]['norm_buffer'] = {}
     args[1]['norm_buffer'] = MinMaxScale(args[1]['buffer'])
+    args[0].send_message('/done_create', 1)
 
 
 def write_norm_track(addrs, args, *unused):
@@ -76,7 +91,7 @@ def init_unispring(addrs, args, *descr):
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = usp.RegionPolygon(vertices)
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
-    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=500)
+    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=500)
     print('----- Done')
     args[1]['corpus'].exportToMax(args[0])
 
@@ -87,7 +102,7 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
-    temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=200*(len(vertices)/4))
+    temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=200*(len(vertices)/4))
     print('----- Done')
     temp_corpus.exportToMax(args[0])
 
@@ -107,12 +122,11 @@ if __name__ == "__main__":
     
     global_hash = {'buffer':{}}
     dispatcher = dispatcher.Dispatcher()
+    dispatcher.map("/export_init", import_init, client, global_hash)
     dispatcher.map("/add_line", add_line, client, global_hash)
     dispatcher.map("/add_buffer", add_buffer, client, global_hash)
     dispatcher.map("/create_norm_track", create_norm_track, client, global_hash)
     dispatcher.map("/write_norm_track", write_norm_track, client, global_hash)
-    dispatcher.map("/reset_track", reset_track, client, global_hash)
-    dispatcher.map("/dumpdone", dumpdone, client, global_hash)
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
     dispatcher.map("/print", print)
@@ -120,6 +134,5 @@ if __name__ == "__main__":
     
     server = osc_server.ThreadingOSCUDPServer(
         (args_server.ip, args_server.port), dispatcher)
-    print("Serving on {}".format(server.server_address))
-    print('----- Waiting')
+    print("----- Serving on {}".format(server.server_address))
     server.serve_forever()
