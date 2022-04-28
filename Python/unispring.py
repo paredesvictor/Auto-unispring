@@ -149,8 +149,8 @@ class Corpus():
             if limit != 0 and count > limit:
                 print('forced exit')
                 exit = True
-        #for point in allPoints:
-            #point.resetNear()
+        for point in allPoints:
+            point.resetNear()
         return count
     
     def exportToMax(self, client):
