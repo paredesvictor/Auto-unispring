@@ -6,7 +6,7 @@ Created on Wed Feb 23 13:58:22 2022
 # Import
 from scipy.spatial import Delaunay, KDTree
 from numpy import arctan2, sqrt, sin, cos, asarray, degrees
-from math import pi
+from math import pi, ceil
 
 
 class Corpus():
@@ -149,8 +149,8 @@ class Corpus():
             if limit != 0 and count > limit:
                 print('forced exit')
                 exit = True
-        #for point in allPoints:
-            #point.resetNear()
+        for point in allPoints:
+            point.resetNear()
         return count
     
     def exportToMax(self, client):
@@ -158,10 +158,20 @@ class Corpus():
             client.send_message('/buffer_index', buffer.id)
             uniX = [point.x for point in buffer.points]
             uniY = [point.y for point in buffer.points]
+            n_rows = len(uniX)
+            steps = ceil(n_rows/200)
             client.send_message('/matrixcol', 7)
-            client.send_message('/set_matrix', [0] + uniX)
+            for i in range(steps):
+                if i != steps-1:
+                    client.send_message('/set_matrix', [i*200] + uniX[i*200:(i+1)*200])
+                else :
+                    client.send_message('/set_matrix', [i*200] + uniX[i*200:])
             client.send_message('/matrixcol', 8)
-            client.send_message('/set_matrix', [0] + uniY)
+            for i in range(steps):
+                if i != steps-1:
+                    client.send_message('/set_matrix', [i*200] + uniY[i*200:(i+1)*200])
+                else :
+                    client.send_message('/set_matrix', [i*200] + uniY[i*200:])
             client.send_message('/refresh', 1)
 
 

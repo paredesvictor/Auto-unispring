@@ -83,6 +83,7 @@ def write_norm_track(addrs, args, *unused):
         for i,line in enumerate(track):
             args[0].send_message('/append', line)
     args[0].send_message('/done_norm', 1)
+    args[0].send_message('/update', 'update')
     print('----- Done')
 
 
@@ -92,8 +93,9 @@ def init_unispring(addrs, args, *descr):
     region = usp.RegionPolygon(vertices)
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
     args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=500)
-    print('----- Done')
     args[1]['corpus'].exportToMax(args[0])
+    args[0].send_message('/update', 'update')
+    print('----- Done')
 
 
 def update_unispring(addrs, args, *coord):
@@ -103,8 +105,9 @@ def update_unispring(addrs, args, *coord):
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
     temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=200*(len(vertices)/4))
-    print('----- Done')
     temp_corpus.exportToMax(args[0])
+    args[0].send_message('/update', 'update')
+    print('----- Done')
 
 
 if __name__ == "__main__":
