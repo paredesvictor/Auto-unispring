@@ -6,17 +6,19 @@ Created on Wed Feb 23 13:58:22 2022
 # Import
 from scipy.spatial import Delaunay, KDTree
 from numpy import arctan2, sqrt, sin, cos, asarray
-from scipy.stats import norm
+from scipy.stats import multivariate_normal as norm
 from math import pi, ceil
 
 def hFunction(type):
     if type == 'uniform':
         f = lambda x, y : 1
     if type == 'gaussian':
-        m = 0.5
-        s = 0.5/3
-        p = norm.pdf(0.5,m,s)
-        f = lambda x, y : [pdf/p+1 for pdf in norm.pdf([x,y],m,s)]
+        mx = 0.5
+        my = 0.5
+        s = 0.02
+        f_norm = norm([mx,my],[[s,0],[0,s]])
+        p = f_norm.pdf([0.5, 0.5])
+        f = lambda x, y : 3 - 2*f_norm.pdf([x, y])/p
     return f
 
 class Corpus():
