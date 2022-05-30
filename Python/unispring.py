@@ -5,13 +5,23 @@ Created on Wed Feb 23 13:58:22 2022
 """
 # Import
 from scipy.spatial import Delaunay, KDTree
-from numpy import arctan2, sqrt, sin, cos, asarray, degrees
+from numpy import arctan2, sqrt, sin, cos, asarray
+from scipy.stats import norm
 from math import pi, ceil
 
+def hFunction(type):
+    if type == 'uniform':
+        f = lambda x, y : 1
+    if type == 'gaussian':
+        m = 0.5
+        s = 0.5/3
+        p = norm.pdf(0.5,m,s)
+        f = lambda x, y : [pdf/p+1 for pdf in norm.pdf([x,y],m,s)]
+    return f
 
 class Corpus():
     
-    def __init__(self, track, region, descrX, descrY):
+    def __init__(self, track, region, descrX, descrY, hDist = 'uniform'):
         # import json
         # descriptors extraction
         self.buffers = []
@@ -20,6 +30,7 @@ class Corpus():
         # initialize normalize bool
         self.is_norm = False
         self.region = region
+        self.hDist = hFunction(hDist)
         self.normalize()
         self.preUniformization()
     
@@ -28,7 +39,17 @@ class Corpus():
         for buffer in self.buffers:
             allPoints += buffer.points
         return allPoints
-        
+
+    def getScalingFactor(self, l0):
+        targetArea = 0
+        nPair = 0
+        for point in self.getAllPoints():
+            for near in point.near:
+                nPair += 1
+                midX ,midY = point.midTo(near)
+                targetArea += self.hDist(midX, midY)**2
+        return sqrt(nPair*l0**2/targetArea)
+
     def normalize(self):
         pointsX = []
         pointsY = []
@@ -42,13 +63,6 @@ class Corpus():
         for buffer in self.buffers:
             buffer.normalize(upperX, lowerX, upperY, lowerY)
         self.is_norm = True
-        
-    def meanDistance(self):
-        d = 0
-        for point in self.getAllPoints():
-            for near in point.near:
-                d += point.distTo(near)
-        return d / (2 * len(self.getAllPoints()))
             
     def preUniformization(self, resize=False, og=(0,0), s = 1, inSquareAuto=False):
         if inSquareAuto:
@@ -56,10 +70,7 @@ class Corpus():
             sideX, sideY, origin = p2.x-p1.x, p2.y-p1.y, p1
         else:
             sideX, sideY, origin = s, s, Point(og[0],og[1])
-        
-        allPoints = []
-        for buffer in self.buffers:
-            allPoints += buffer.points
+        allPoints = self.getAllPoints()
         nbPoints = len(allPoints)
         if not resize:
             allPoints.sort(key=Point.getX)
@@ -84,12 +95,10 @@ class Corpus():
         return triangulation
     
     def updateNearPoints(self, triangulation):
-        allPoints = []
-        for buffer in self.buffers:
-            for point in buffer.points:
-                allPoints.append(point)
-                point.resetNear()
-                point.updateOrigin()
+        allPoints = self.getAllPoints()
+        for point in allPoints:
+            point.resetNear()
+            point.updateOrigin()
         for tri in triangulation.simplices:
             p1 = allPoints[tri[0]]
             p2 = allPoints[tri[1]]
@@ -108,26 +117,33 @@ class Corpus():
         # first triangulation
         self.delaunayTriangulation()
         self.preUniformization(resize=True, inSquareAuto=True)
-        allPoints = []
-        for buffer in self.buffers:
-            allPoints += buffer.points
-        nbPoints = len(allPoints)
+        allPoints = self.getAllPoints()
         # l0 is calculated for a uniform target distribution with all 
         # delaunay triangles becoming equilateral, does not account for points 
         # on the borders
+        nbPoints = len(allPoints)
         uniform_density = nbPoints / self.region.getArea()
         l0 = sqrt(2/(sqrt(3)*uniform_density))
+        print('l0 : ',l0)
         exit = False
         count= 0
         while not exit:
+            show = False
             exit = True
             count += 1
             updateTri = False
+            hScale = self.getScalingFactor(l0)
             for point in allPoints:
-                for nearPoint in point.near:
-                    f = k * (l0 - point.distTo(nearPoint))
+                for near in point.near:
+                    midX ,midY = point.midTo(near)
+                    # k != stifness, just a force scaling factor
+                    f = self.hDist(midX, midY) * hScale * k - point.distTo(near)
+                    if show == True:
+                        print('scale : ',hScale)
+                        if input('l : '+str(self.hDist(midX, midY) * hScale * k)) == '':
+                            show = False
                     if f > 0:
-                        nearPoint.repulsiveForce(f, point)
+                        near.repulsiveForce(f, point)
             for point in allPoints:
                 isInside, closestPoint = self.region.isInside(point)
                 if not isInside:
@@ -199,7 +215,13 @@ class Point():
         self.near = []
         self.pushX = 0.0
         self.pushY = 0.0
+        self.l0 = 0
     
+    def midTo(self, point):
+        midX = (self.x + point.x)/2
+        midY = (self.y + point.y)/2
+        return midX, midY
+
     def getX(self):
         return self.x
     

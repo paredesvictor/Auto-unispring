@@ -91,8 +91,8 @@ def init_unispring(addrs, args, *descr):
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = usp.RegionPolygon(vertices)
-    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
-    args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=500)
+    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1, hDist='gaussian')
+    print(args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=500))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -104,7 +104,7 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = usp.RegionPolygon(vertices)
     temp_corpus.region = region
-    temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=10, client=args[0], limit=200*(len(vertices)/4))
+    print(temp_corpus.unispringUniform(1, 0.01, 0.02, exportPeriod=5, client=args[0], limit=200*(len(vertices)/4)))
     temp_corpus.exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
