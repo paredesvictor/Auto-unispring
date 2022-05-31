@@ -18,7 +18,7 @@ def hFunction(type):
         s = 0.02
         f_norm = norm([mx,my],[[s,0],[0,s]])
         p = f_norm.pdf([0.5, 0.5])
-        f = lambda x, y : 3 - 2*f_norm.pdf([x, y])/p
+        f = lambda x, y : 4 - 3*f_norm.pdf([x, y])/p
     return f
 
 class Corpus():

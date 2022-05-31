@@ -4,6 +4,7 @@ from copy import deepcopy
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
+from region import RegionPolygon
 
 
 def MinMaxScale(track):
@@ -82,7 +83,7 @@ def write_norm_track(addrs, args, *unused):
         args[0].send_message('/buffer_index', int(idx_buffer))
         for i,line in enumerate(track):
             args[0].send_message('/append', line)
-    args[0].send_message('/done_norm', 1)
+    args[0].send_message('/done_norm', 1) 
     args[0].send_message('/update', 'update')
     print('----- Done')
 
@@ -90,9 +91,9 @@ def write_norm_track(addrs, args, *unused):
 def init_unispring(addrs, args, *descr):
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
-    region = usp.RegionPolygon(vertices)
+    region = RegionPolygon(vertices)
     args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1, hDist='gaussian')
-    print('e : ',args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=0, client=args[0], limit=500))
+    print('e : ',args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=1, client=args[0], limit=500))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -102,7 +103,7 @@ def update_unispring(addrs, args, *coord):
     print('Update...')
     temp_corpus = deepcopy(args[1]["corpus"])
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
-    region = usp.RegionPolygon(vertices)
+    region = RegionPolygon(vertices)
     temp_corpus.region = region
     print('e : ',temp_corpus.unispringUniform(1.01, 0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
     temp_corpus.exportToMax(args[0])
