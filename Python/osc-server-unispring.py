@@ -92,8 +92,8 @@ def init_unispring(addrs, args, *descr):
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = RegionPolygon(vertices)
-    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1, hDist='gaussian')
-    print('e : ',args[1]['corpus'].unispringUniform(1, 0.01, 0.02, exportPeriod=1, client=args[0], limit=500))
+    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1, hDist='progressive')
+    print('e : ',args[1]['corpus'].unispringUniform(0.01, 0.02, exportPeriod=1, client=args[0], limit=500))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -105,10 +105,18 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = RegionPolygon(vertices)
     temp_corpus.region = region
-    print('e : ',temp_corpus.unispringUniform(1.01, 0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
+    print('e : ',temp_corpus.unispringUniform(0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
     temp_corpus.exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
+
+
+def add_expl_point(addrs, args, *coord):
+    return
+
+
+def init_expl(addrs, args, mess):
+    args[1][2]
 
 
 if __name__ == "__main__":
@@ -133,6 +141,8 @@ if __name__ == "__main__":
     dispatcher.map("/write_norm_track", write_norm_track, client, global_hash)
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
+    dispatcher.map("/init_expl", init_expl, client, global_hash)
+    dispatcher.map("/add_expl_point", add_expl_point, client, global_hash)
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
     

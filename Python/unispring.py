@@ -19,6 +19,8 @@ def hFunction(type):
         f_norm = norm([mx,my],[[s,0],[0,s]])
         p = f_norm.pdf([0.5, 0.5])
         f = lambda x, y : 1 + f_norm.pdf([x, y])/p
+    if type == 'progressive':
+        f = lambda x, y : 1 + x
     return f
 
 class Corpus():
@@ -115,7 +117,7 @@ class Corpus():
                 p3.near.append(p2)
                 p2.near.append(p3)
         
-    def unispringUniform(self, k, minDist, maxDist, exportPeriod=0, client=None, limit=0):
+    def unispringUniform(self, minDist, maxDist, exportPeriod=0, client=None, limit=0):
         # first triangulation
         self.delaunayTriangulation()
         self.preUniformization(resize=True, inSquareAuto=True)
@@ -128,24 +130,19 @@ class Corpus():
         l0 = sqrt(2/(sqrt(3)*uniform_density))
         print('l0 : ',l0)
         exit = False
-        count= 0
+        count = 0
         while not exit:
-            show = False
             exit = True
             count += 1
             updateTri = False
             hScale = self.getScalingFactor(l0)
+            fScale = 1
             for point in allPoints:
                 for near in point.near:
                     midX ,midY = point.midTo(near)
-                    # k != stifness, just a force scaling factor
-                    f = hScale * k / self.hDist(midX, midY) - point.distTo(near)
-                    if show == True:
-                        print('scale : ',hScale)
-                        if input('l : '+str(self.hDist(midX, midY) * hScale * k)) == '':
-                            show = False
+                    f = hScale / self.hDist(midX, midY) - point.distTo(near)
                     if f > 0:
-                        near.repulsiveForce(f, point)
+                        near.repulsiveForce(f * fScale, point)
             for point in allPoints:
                 isInside, closestPoint = self.region.isInside(point)
                 if not isInside:
@@ -218,6 +215,7 @@ class Point():
         self.pushX = 0.0
         self.pushY = 0.0
         self.l0 = 0
+        self.f = 0
     
     def midTo(self, point):
         midX = (self.x + point.x)/2
