@@ -5,6 +5,7 @@ from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
 from region import RegionPolygon
+from numpy import zeros
 
 
 def MinMaxScale(track):
@@ -92,8 +93,8 @@ def init_unispring(addrs, args, *descr):
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = RegionPolygon(vertices)
-    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1, hDist='progressive')
-    print('e : ',args[1]['corpus'].unispringUniform(0.01, 0.02, exportPeriod=1, client=args[0], limit=500))
+    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
+    print('e : ',args[1]['corpus'].uniform(client=args[0]))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -101,22 +102,41 @@ def init_unispring(addrs, args, *descr):
 
 def update_unispring(addrs, args, *coord):
     print('Update...')
-    temp_corpus = deepcopy(args[1]["corpus"])
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = RegionPolygon(vertices)
-    temp_corpus.region = region
-    print('e : ',temp_corpus.unispringUniform(0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
-    temp_corpus.exportToMax(args[0])
+    args[1]["corpus"].region = region
+    print('e : ',args[1]["corpus"].unispring(0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
+    args[1]["corpus"].exportToMax(args[0])
+    args[0].send_message('/update', 'update')
+    print('----- Done')
+
+
+def adapt_unispring(addrs, args, *unused):
+    print('Adapt...')
+    print('e : ',args[1]["corpus"].unispring(0.01, 0.02, exportPeriod=1, client=args[0], limit=500, hDist='from_table', hTable=args[1]['expl_record']))
+    args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
 
 
 def add_expl_point(addrs, args, *coord):
-    return
+    n = args[1]['expl_record'].shape[0]
+    xIdx = int(coord[0] * n)
+    yIdx = int(coord[1] * n)
+    if 0 <= xIdx < n and 0 <= yIdx < n:
+        args[1]['expl_record'][xIdx, yIdx] += 1
 
 
-def init_expl(addrs, args, mess):
-    args[1][2]
+def init_expl(addrs, args, size):
+    args[1]['expl_record'] = zeros((size, size))
+
+
+def print_expl(addrs, args, *unused):
+    print(args[1]['expl_record'])
+
+
+def interpolation(addrs, args, interp):
+    args[1]['corpus'].exportToMax(args[0], interp)
 
 
 if __name__ == "__main__":
@@ -134,19 +154,27 @@ if __name__ == "__main__":
     
     global_hash = {'buffer':{}}
     dispatcher = dispatcher.Dispatcher()
+
     dispatcher.map("/export_init", import_init, client, global_hash)
     dispatcher.map("/add_line", add_line, client, global_hash)
     dispatcher.map("/add_buffer", add_buffer, client, global_hash)
     dispatcher.map("/create_norm_track", create_norm_track, client, global_hash)
     dispatcher.map("/write_norm_track", write_norm_track, client, global_hash)
+
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
+    dispatcher.map("/adapt_unispring", adapt_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
+
     dispatcher.map("/init_expl", init_expl, client, global_hash)
     dispatcher.map("/add_expl_point", add_expl_point, client, global_hash)
+    dispatcher.map("/print_expl", print_expl, client, global_hash)
+    dispatcher.map("/interpolation", interpolation, client, global_hash)
+
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
-    
+
     server = osc_server.ThreadingOSCUDPServer(
         (args_server.ip, args_server.port), dispatcher)
+
     print("----- Serving on {}".format(server.server_address))
     server.serve_forever()

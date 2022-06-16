@@ -4,28 +4,37 @@ Created on Wed Feb 23 13:58:22 2022
 @author: victorparedes
 """
 # Import
-from scipy.spatial import Delaunay
-from numpy import arctan2, sqrt, sin, cos, asarray
+from scipy.spatial import Delaunay, ConvexHull
+from numpy import arctan2, sqrt, sin, cos, asarray, clip
 from scipy.stats import multivariate_normal as norm
 from math import ceil
 
-def hFunction(type):
+def hFuncFromTable(x, y, table):
+    n = table.shape[0]
+    xIdx = int(clip(x * n, 0, n - 1))
+    yIdx = int(clip(y * n, 0, n - 1))
+    val = table[xIdx, yIdx]
+    return val / table.max() + 0.25
+
+def hFunction(type, table):
     if type == 'uniform':
-        f = lambda x, y : 1
-    if type == 'gaussian':
+        return lambda x, y : 1
+    elif type == 'gaussian':
         mx = 0.5
         my = 0.5
         s = 0.02
         f_norm = norm([mx,my],[[s,0],[0,s]])
         p = f_norm.pdf([0.5, 0.5])
-        f = lambda x, y : 1 + f_norm.pdf([x, y])/p
-    if type == 'progressive':
-        f = lambda x, y : 1 + x
-    return f
+        return lambda x, y : 1 + f_norm.pdf([x, y])/p
+    elif type == 'progressive':
+        return lambda x, y : 1 + x
+    elif type == 'from_table':
+        return lambda x, y : hFuncFromTable(x, y, table)
+
 
 class Corpus():
     
-    def __init__(self, track, region, descrX, descrY, hDist = 'uniform'):
+    def __init__(self, track, region, descrX, descrY):
         # import json
         # descriptors extraction
         self.buffers = []
@@ -34,7 +43,6 @@ class Corpus():
         # initialize normalize bool
         self.is_norm = False
         self.region = region
-        self.hDist = hFunction(hDist)
         self.normalize()
         self.preUniformization()
     
@@ -44,7 +52,7 @@ class Corpus():
             allPoints += buffer.points
         return allPoints
 
-    def getScalingFactor(self, l0):
+    def getScalingFactor(self):
         targetArea = 0
         nPair = 0
         for point in self.getAllPoints():
@@ -52,7 +60,7 @@ class Corpus():
                 nPair += 1
                 midX ,midY = point.midTo(near)
                 targetArea += 1/self.hDist(midX, midY)**2
-        return sqrt(nPair*l0**2/targetArea)
+        return sqrt(nPair/targetArea)
 
     def normalize(self):
         pointsX = []
@@ -116,12 +124,24 @@ class Corpus():
             if p2 not in p3.near:
                 p3.near.append(p2)
                 p2.near.append(p3)
+    
+    def uniform(self, client=None):
+        print('yeah')
+        self.unispring(0.01, 0.02, exportPeriod=int(bool(client)), client=client, limit=500)
+        for p in self.getAllPoints():
+            #p.storeUni()
+            continue
         
-    def unispringUniform(self, minDist, maxDist, exportPeriod=0, client=None, limit=0):
+    def unispring(self, minDist, maxDist, exportPeriod=0, client=None, limit=0, hDist='uniform', hTable=None):
+        allPoints = self.getAllPoints()
+        # start from uniform distribution
+        for p in allPoints:
+            p.recallUni()
+        # change hDist function
+        self.hDist = hFunction(hDist, hTable)
         # first triangulation
         self.delaunayTriangulation()
         self.preUniformization(resize=True, inSquareAuto=True)
-        allPoints = self.getAllPoints()
         # l0 is calculated for a uniform target distribution with all 
         # delaunay triangles becoming equilateral, does not account for points 
         # on the borders
@@ -135,12 +155,12 @@ class Corpus():
             exit = True
             count += 1
             updateTri = False
-            hScale = self.getScalingFactor(l0)
+            hScale = self.getScalingFactor()
             fScale = 1
             for point in allPoints:
                 for near in point.near:
                     midX ,midY = point.midTo(near)
-                    f = hScale / self.hDist(midX, midY) - point.distTo(near)
+                    f = l0 * hScale / self.hDist(midX, midY) - point.distTo(near)
                     if f > 0:
                         near.repulsiveForce(f * fScale, point)
             for point in allPoints:
@@ -168,11 +188,11 @@ class Corpus():
             point.resetNear()
         return count
     
-    def exportToMax(self, client):
+    def exportToMax(self, client, itrp=0):
         for buffer in self.buffers:
             client.send_message('/buffer_index', buffer.id)
-            uniX = [point.x for point in buffer.points]
-            uniY = [point.y for point in buffer.points]
+            uniX = [p.x*(1-itrp) + p.uni_x*itrp for p in buffer.points]
+            uniY = [p.y*(1-itrp) + p.uni_y*itrp for p in buffer.points]
             n_rows = len(uniX)
             steps = ceil(n_rows/200)
             client.send_message('/matrixcol', 7)
@@ -209,13 +229,13 @@ class Point():
     def __init__(self, x, y):
         self.x = x
         self.y = y
+        self.uni_x = x
+        self.uni_y = y
         self.ogX = x
         self.ogY = y
         self.near = []
         self.pushX = 0.0
         self.pushY = 0.0
-        self.l0 = 0
-        self.f = 0
     
     def midTo(self, point):
         midX = (self.x + point.x)/2
@@ -257,14 +277,19 @@ class Point():
         nextY = pt.y
         self.pushX = nextX - self.x
         self.pushY = nextY - self.y
-    
-    def distToCenter(self):
-        return self.distTo(Point(0.5, 0.5))
 
     def vecOrientation(self, point):
         x = point.x - self.x
         y = point.y - self.y
         return arctan2(y,x)
+
+    def storeUni(self):
+        self.uni_x = self.x
+        self.uni_y = self.y
+    
+    def recallUni(self):
+        self.x = self.uni_x
+        self.y = self.uni_y
 
 if __name__ == '__main__':
     print('no main process')
