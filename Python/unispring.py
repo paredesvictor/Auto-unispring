@@ -291,5 +291,11 @@ class Point():
         self.x = self.uni_x
         self.y = self.uni_y
 
+    def __str__(self):
+        return str(self.x) + ' ' + str(self.y)
+
+    def __repr__(self):
+        return str(self.x) + ' ' + str(self.y)
+
 if __name__ == '__main__':
     print('no main process')
