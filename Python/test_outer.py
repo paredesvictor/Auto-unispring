@@ -1,6 +1,6 @@
 from scipy.spatial import ConvexHull
 from unispring import Point
-from numpy import mean, asarray, sqrt, pi, cos, sin
+from numpy import mean, asarray, sqrt, pi, cos, sin, tan, sign
 import matplotlib.pyplot as plt
 import random as rd
 
@@ -11,23 +11,18 @@ coord = [rd.random() for i in range(2*N)]
 x = coord[0:len(coord):2]
 y = coord[1:len(coord)+1:2]
 pts = [Point(x[i], y[i]) for i in range(len(x))]
-points = asarray([(p.x,p.y) for p in pts])
-pts = [Point(p[0], p[1]) for p in points]
 
+points = asarray([(p.x,p.y) for p in pts])
 convex_hull = ConvexHull(points)   
 #centroid = mean(points[convex_hull.vertices, :], axis=0)
 centroid = mean(points, axis=0)
 p_cent = Point(*centroid)
-
 n_bord = int(1 + sqrt(len(pts))) * 4
 n_bin = int(n_bord / 2)
 angle_bin = 2 * pi / n_bin
 sorted_pts = sorted(pts, key=lambda p : Point.vecOrientation(p, p_cent))
 bins = [[p for p in sorted_pts if -pi+i*angle_bin <= p.vecOrientation(p_cent) < -pi+(i+1)*angle_bin] 
             for i in range(n_bin)]
-
-
-
 hull = []
 for bin in bins:
     if len(bin) == 0:
@@ -42,15 +37,27 @@ for bin in bins:
             if p.distTo(p_cent) > p1.distTo(p_cent) or p.distTo(p_cent) > p2.distTo(p_cent):
                 p1 = max([p1,p2], key=lambda p:Point.distTo(p,p_cent))
                 p2 = p
-        hull.append(p1)
-        hull.append(p2)
+        hull.append([p1, p2])
 
-plt.plot(x,y,'.')
-for i in range(n_bin):
-    xp = [centroid[0], 0.5*cos(angle_bin*i)+centroid[0]]
-    yp = [centroid[1], 0.5*sin(angle_bin*i)+centroid[1]]
-    plt.plot(xp,yp,color='black')
-for i in range(len(hull)-1):
-    plt.plot((hull[i].x,hull[i+1].x),(hull[i].y,hull[i+1].y),color='orange')
-plt.plot((hull[-1].x,hull[0].x),(hull[-1].y,hull[0].y),color='orange')
-plt.show()
+n = 29
+x = []
+y = []
+for i in range(n):
+    theta = i * 2 * pi / n
+    if theta == 0 or theta == pi:
+        x = cos(theta)
+    else:
+        x = sign(cos(theta))*min(1,abs(1/tan(theta)))
+    if theta == pi/2 or theta == 3 * pi / 2:
+        y = sin(theta)
+    else:
+        y = sign(sin(theta))*min(1,abs(tan(theta)))
+# plt.plot(x,y,'.')
+# for i in range(n_bin):
+#     xp = [centroid[0], 0.5*cos(angle_bin*i)+centroid[0]]
+#     yp = [centroid[1], 0.5*sin(angle_bin*i)+centroid[1]]
+#     plt.plot(xp,yp,color='black')
+# for i in range(len(hull)-1):
+#     plt.plot((hull[i].x,hull[i+1].x),(hull[i].y,hull[i+1].y),color='orange')
+# plt.plot((hull[-1].x,hull[0].x),(hull[-1].y,hull[0].y),color='orange')
+# plt.show()
