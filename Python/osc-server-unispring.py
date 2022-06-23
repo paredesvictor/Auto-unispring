@@ -7,7 +7,6 @@ from pythonosc import udp_client
 from region import RegionPolygon
 from numpy import zeros
 
-
 def MinMaxScale(track):
     n_descr = len(track['1'][0])
     norm_track = {}
@@ -29,7 +28,6 @@ def MinMaxScale(track):
             norm_track[key].append(new_line)
     return norm_track
 
-
 def add_line(addrs, args, *message):
     index = int(message[-2])
     buffer = str(message[-1])
@@ -48,7 +46,6 @@ def add_line(addrs, args, *message):
     if args[1]['nb_lines'][buffer] % args[1]['osc_batch_size'] == 0:
         args[0].send_message('/next_batch', 1)
 
-
 def add_buffer(addrs, args, *message):
     n_cols = int(message[2])
     n_rows = int(message[0])
@@ -57,7 +54,6 @@ def add_buffer(addrs, args, *message):
     args[1]['remaining_lines'][buffer] = n_rows
     args[1]['nb_lines'][buffer] = 0
     args[0].send_message('/start_dump', 1)
-
 
 def import_init(addrs, args, *message):
     print('Export from Max...')
@@ -68,16 +64,13 @@ def import_init(addrs, args, *message):
     args[1]['remaining_lines'] = {}
     args[0].send_message('/begin_import', 1)
 
-
 def eval_str(addrs, args, eval_string):
     eval(eval_string)
-
 
 def create_norm_track(addrs, args, *unused):
     args[1]['norm_buffer'] = {}
     args[1]['norm_buffer'] = MinMaxScale(args[1]['buffer'])
     args[0].send_message('/done_create', 1)
-
 
 def write_norm_track(addrs, args, *unused):
     for idx_buffer, track in args[1]['norm_buffer'].items():
@@ -87,7 +80,6 @@ def write_norm_track(addrs, args, *unused):
     args[0].send_message('/done_norm', 1) 
     args[0].send_message('/update', 'update')
     print('----- Done')
-
 
 def init_unispring(addrs, args, *descr):
     print('Uniformization...')
@@ -99,7 +91,6 @@ def init_unispring(addrs, args, *descr):
     args[0].send_message('/update', 'update')
     print('----- Done')
 
-
 def update_unispring(addrs, args, *coord):
     print('Update...')
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
@@ -110,14 +101,12 @@ def update_unispring(addrs, args, *coord):
     args[0].send_message('/update', 'update')
     print('----- Done')
 
-
 def adapt_unispring(addrs, args, *unused):
     print('Adapt...')
     print('e : ',args[1]["corpus"].unispring(0.01, 0.02, exportPeriod=1, client=args[0], limit=500, hDist='from_table', hTable=args[1]['expl_record']))
     args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
-
 
 def add_expl_point(addrs, args, *coord):
     n = args[1]['expl_record'].shape[0]
@@ -126,18 +115,14 @@ def add_expl_point(addrs, args, *coord):
     if 0 <= xIdx < n and 0 <= yIdx < n:
         args[1]['expl_record'][xIdx, yIdx] += 1
 
-
 def init_expl(addrs, args, size):
     args[1]['expl_record'] = zeros((size, size))
-
 
 def print_expl(addrs, args, *unused):
     print(args[1]['expl_record'])
 
-
 def interpolation(addrs, args, interp):
     args[1]['corpus'].exportToMax(args[0], interp)
-
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
