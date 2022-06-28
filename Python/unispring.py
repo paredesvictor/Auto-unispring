@@ -4,9 +4,8 @@ Created on Wed Feb 23 13:58:22 2022
 @author: victorparedes
 """
 # Import
-from operator import truediv
-from scipy.spatial import Delaunay, ConvexHull
-from numpy import arctan2, sqrt, sin, cos, asarray, clip
+from scipy.spatial import Delaunay
+from numpy import arctan2, sqrt, sin, cos, asarray, clip, pi
 from scipy.stats import multivariate_normal as norm
 from math import ceil
 
@@ -43,7 +42,6 @@ class Corpus():
             self.buffers.append(Buffer(buffer, descrX, descrY, int(key)))
         # initialize normalize bool
         self.is_norm = False
-        self.isUni = False
         self.region = region
         self.normalize()
         self.preUniformization()
@@ -127,20 +125,15 @@ class Corpus():
                 p3.near.append(p2)
                 p2.near.append(p3)
     
-    def uniform(self, client=None):
+    def uniform(self, client=None, store=True):
         c1, c2 = self.unispring(uniform=True, exportPeriod=int(bool(client)), client=client)
-        self.isUni = True
+        if store:
+            for p in self.getAllPoints():
+                p.storeUni()
         return c1, c2
         
     def unispring(self, uniform=False ,exportPeriod=0, client=None, limit=0, hDist='uniform', hTable=None):
         allPoints = self.getAllPoints()
-        # start from uniform distribution (if exists)
-        if self.isUni:
-            for p in allPoints:
-                p.storeUni()
-        else:
-            for p in allPoints:
-                p.recallUni()
         # change hDist function
         self.hDist = hFunction(hDist, hTable)
         # pre-uniformization
@@ -167,7 +160,7 @@ class Corpus():
             hScale = self.getScalingFactor(l0)
             #  fScale = 1
             # 0.4 for 121 points
-            fScale = 0.2 * max(0,(1 - (3*count/nbPoints)**2)) + 0.8
+            fScale = 0.35 * max(0,(1 - (3*count/nbPoints)**2)) + 0.8
             for point in allPoints:
                 for near in point.near:
                     midX ,midY = point.midTo(near)
@@ -199,6 +192,30 @@ class Corpus():
         for point in allPoints:
             point.resetNear()
         return count, c
+
+    def simpleAttractor(self, force, c, recallUni=True, client=None):
+        # create gaussian
+        mx = 0.5
+        my = 0.5
+        s_x = 2 * c
+        s_y = 2 * c
+        theta = 0
+        a = cos(theta)**2 / (2 * s_x**2) + sin(theta)**2 / (2 * s_y**2)
+        b = sin(2*theta) / (4 * s_x**2) - sin(2*theta)**2 / (4 * s_y**2)
+        c = sin(theta)**2 / (2 * s_x**2) + cos(theta)**2 / (2 * s_y**2)
+        f_norm = norm([mx,my],[[a,b],[b,c]])
+        center_gaussian = Point(mx,my)
+        max_gaussian = f_norm.pdf((mx,my))
+        # update points to gaussian
+        allPoints = self.getAllPoints()
+        for p in allPoints:
+            if recallUni:
+                p.recallUni()
+            f = f_norm.pdf((p.x, p.y)) / max_gaussian * force
+            p.attractiveForce(f, center_gaussian)
+            p.update()
+        if client:
+            self.exportToMax(client)
     
     def exportToMax(self, client, itrp=0):
         for buffer in self.buffers:
@@ -268,6 +285,11 @@ class Point():
         self.pushX += f * cos(angle)
         self.pushY += f * sin(angle)
         
+    def attractiveForce(self, f, point):
+        angle = arctan2(self.y - point.y, self.x - point.x)
+        self.pushX -= f * cos(angle)
+        self.pushY -= f * sin(angle)
+
     def update(self):
         self.x += self.pushX
         self.y += self.pushY

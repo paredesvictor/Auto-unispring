@@ -124,6 +124,9 @@ def print_expl(addrs, args, *unused):
 def interpolation(addrs, args, interp):
     args[1]['corpus'].exportToMax(args[0], interp)
 
+def gaussian_attract(addrs, args, *mess):
+    args[1]['corpus'].simpleAttractor(mess[0], mess[1], client=args[0])
+
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
     parser_client.add_argument("--ip", default="127.0.0.1")
@@ -154,6 +157,7 @@ if __name__ == "__main__":
     dispatcher.map("/add_expl_point", add_expl_point, client, global_hash)
     dispatcher.map("/print_expl", print_expl, client, global_hash)
     dispatcher.map("/interpolation", interpolation, client, global_hash)
+    dispatcher.map("/gaussian_attract", gaussian_attract, client, global_hash)
 
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)
