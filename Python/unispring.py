@@ -43,6 +43,7 @@ class Corpus():
             self.buffers.append(Buffer(buffer, descrX, descrY, int(key)))
         # initialize normalize bool
         self.is_norm = False
+        self.isUni = False
         self.region = region
         self.normalize()
         self.preUniformization()
@@ -127,21 +128,26 @@ class Corpus():
                 p2.near.append(p3)
     
     def uniform(self, client=None):
-        c1, c2 = self.unispring(0.01, 0.02, exportPeriod=int(bool(client)), client=client)
-        for p in self.getAllPoints():
-            p.storeUni()
-            continue
+        c1, c2 = self.unispring(uniform=True, exportPeriod=int(bool(client)), client=client)
+        self.isUni = True
         return c1, c2
         
-    def unispring(self, minDist, maxDist, exportPeriod=0, client=None, limit=0, hDist='uniform', hTable=None):
+    def unispring(self, uniform=False ,exportPeriod=0, client=None, limit=0, hDist='uniform', hTable=None):
         allPoints = self.getAllPoints()
         # start from uniform distribution (if exists)
-        for p in allPoints:
-            p.recallUni()
+        if self.isUni:
+            for p in allPoints:
+                p.storeUni()
+        else:
+            for p in allPoints:
+                p.recallUni()
         # change hDist function
         self.hDist = hFunction(hDist, hTable)
         # pre-uniformization
-        self.preUniformization(resize=True, inSquareAuto=True)
+        if uniform:
+            self.preUniformization(resize=False, inSquareAuto=False)
+        else:
+            self.preUniformization(resize=True, inSquareAuto=False)
         # first triangulation
         self.delaunayTriangulation()
         # l0 is calculated for a uniform target distribution with all 
@@ -159,9 +165,9 @@ class Corpus():
             count += 1
             updateTri = False
             hScale = self.getScalingFactor(l0)
-            # fScale = 1
+            #  fScale = 1
             # 0.4 for 121 points
-            fScale = 0.4 * max(0,(1 - (2*count/nbPoints)**2)) + 1
+            fScale = 0.2 * max(0,(1 - (3*count/nbPoints)**2)) + 0.8
             for point in allPoints:
                 for near in point.near:
                     midX ,midY = point.midTo(near)
@@ -172,7 +178,7 @@ class Corpus():
                 isInside, closestPoint = self.region.isInside(point)
                 if not isInside:
                     point.moveTo(closestPoint)
-                if point.moveDist() > l0/4:
+                if point.moveDist() > l0/3:
                     exit = False
                 point.update()
                 if point.distFromOrigin() > l0:

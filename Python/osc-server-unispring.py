@@ -96,14 +96,14 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = RegionPolygon(vertices)
     args[1]["corpus"].region = region
-    print('e : ',args[1]["corpus"].unispring(0.01, 0.02, exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
+    print('e : ',args[1]["corpus"].unispring(exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
     args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
 
 def adapt_unispring(addrs, args, *unused):
     print('Adapt...')
-    print('e : ',args[1]["corpus"].unispring(0.01, 0.02, exportPeriod=1, client=args[0], limit=500, hDist='from_table', hTable=args[1]['expl_record']))
+    print('e : ',args[1]["corpus"].unispring(exportPeriod=1, client=args[0], limit=500, hDist='from_table', hTable=args[1]['expl_record']))
     args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
