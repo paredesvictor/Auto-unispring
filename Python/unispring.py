@@ -1,9 +1,3 @@
-"""
-Created on Wed Feb 23 13:58:22 2022
-
-@author: victorparedes
-"""
-# Import
 from scipy.spatial import Delaunay
 from numpy import arctan2, sqrt, sin, cos, asarray, clip, pi
 from scipy.stats import multivariate_normal as norm
