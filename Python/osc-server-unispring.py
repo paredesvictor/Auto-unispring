@@ -125,7 +125,7 @@ def interpolation(addrs, args, interp):
     args[1]['corpus'].exportToMax(args[0], interp)
 
 def gaussian_attract(addrs, args, *mess):
-    args[1]['corpus'].simpleAttractor(mess[0], mess[1], client=args[0])
+    args[1]['corpus'].simpleAttractor(mess[0], client=args[0])
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()

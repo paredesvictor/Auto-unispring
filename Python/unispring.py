@@ -1,5 +1,5 @@
 from scipy.spatial import Delaunay
-from numpy import arctan2, sqrt, sin, cos, asarray, clip, pi
+from numpy import arctan2, sqrt, sin, cos, asarray, clip, exp
 from scipy.stats import multivariate_normal as norm
 from math import ceil
 
@@ -187,26 +187,69 @@ class Corpus():
             point.resetNear()
         return count, c
 
-    def simpleAttractor(self, force, c, recallUni=True, client=None):
-        # create gaussian
-        mx = 0.5
-        my = 0.5
-        s_x = 2 * c
-        s_y = 2 * c
-        theta = 0
-        a = cos(theta)**2 / (2 * s_x**2) + sin(theta)**2 / (2 * s_y**2)
-        b = sin(2*theta) / (4 * s_x**2) - sin(2*theta)**2 / (4 * s_y**2)
-        c = sin(theta)**2 / (2 * s_x**2) + cos(theta)**2 / (2 * s_y**2)
-        f_norm = norm([mx,my],[[a,b],[b,c]])
-        center_gaussian = Point(mx,my)
-        max_gaussian = f_norm.pdf((mx,my))
-        # update points to gaussian
-        allPoints = self.getAllPoints()
+    def simpleAttractorOld(self, G, coeff, recallUni=True, client=None):
+        mx = [0.4]
+        my = [0.5]
+        for i in range(len(mx)):
+            s_x = coeff
+            s_y = 2 * coeff
+            theta = 0
+            a = cos(theta)**2 / (2 * s_x**2) + sin(theta)**2 / (2 * s_y**2)
+            b = sin(2*theta) / (4 * s_x**2) - sin(2*theta)**2 / (4 * s_y**2)
+            c = sin(theta)**2 / (2 * s_x**2) + cos(theta)**2 / (2 * s_y**2)
+            f_norm = norm([mx[i],my[i]],[[a,b],[b,c]])
+            center_gaussian = Point(mx[i],my[i])
+            max_gaussian = f_norm.pdf((mx[i],my[i]))
+            allPoints = self.getAllPoints()
+            for p in allPoints:
+                if recallUni:
+                    p.recallUni()
+                fg = G * f_norm.pdf((p.x, p.y)) / max_gaussian
+                fa = G / p.distTo(center_gaussian)**2
+                fs = G * p.distTo(center_gaussian)
+                f = fs
+                k = 1
+                l = f / k
+                l = min(l, p.distTo(center_gaussian))
+                p.attractiveForce(l, center_gaussian)
         for p in allPoints:
-            if recallUni:
-                p.recallUni()
-            f = f_norm.pdf((p.x, p.y)) / max_gaussian * force
-            p.attractiveForce(f, center_gaussian)
+            p.update()
+        if client:
+            self.exportToMax(client)
+
+    def simpleAttractor(self, coeff, recallUni=True, client=None):
+        mx = [0.2, 0.5, 0.8]
+        my = [0.5, 0.2, 0.8]
+        # mx = [0.5]
+        # my = [0.5]
+        for i in range(len(mx)):
+            def dg(x, y): 
+                sx = 0.25
+                sy = 0.25
+                deriv_gauss = exp(-1 * ((x - mx[i])**2 / (2 * sx**2) + (y - my[i])**2 / (2 * sy**2)))
+                deriv_gauss *= sqrt((x - mx[i])**2 / sx**2 + (y - my[i])**2 / sy**2)
+                return deriv_gauss
+            center_gaussian = Point(mx[i],my[i])
+            max_gaussian = 0.86
+            allPoints = self.getAllPoints()
+            for p in allPoints:
+                if recallUni:
+                    p.recallUni()
+                # fg = G * f_norm.pdf((p.x, p.y)) / max_gaussian
+                # fa = G / p.distTo(center_gaussian)**2
+                # fs = G * p.distTo(center_gaussian)
+                f = 0.184 * dg(p.x, p.y) / max_gaussian
+                c = 0.55 # 0.55: unused
+                border = 0.5 - c
+                if (border < p.x < 1-border and border < p.y < 1-border):
+                    k = min(9 * (p.distTo(center_gaussian)/coeff)**7 + 1, 10)
+                else:
+                    k = (10 - 9*c**7+1)/(sqrt(2)/2 - c) * p.distTo(center_gaussian) + 9*c**7+1
+                    # k = 10
+                l = f / k
+                l = min(l, p.distTo(center_gaussian))
+                p.attractiveForce(l, center_gaussian)
+        for p in allPoints:
             p.update()
         if client:
             self.exportToMax(client)
