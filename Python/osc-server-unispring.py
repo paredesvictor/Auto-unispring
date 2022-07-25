@@ -1,11 +1,11 @@
 import argparse
 import unispring as usp
-from copy import deepcopy
 from pythonosc import dispatcher
 from pythonosc import osc_server
 from pythonosc import udp_client
 from region import RegionPolygon
-from numpy import zeros
+import numpy as np
+from sklearn import mixture
 
 def MinMaxScale(track):
     n_descr = len(track['1'][0])
@@ -109,6 +109,8 @@ def adapt_unispring(addrs, args, *unused):
     print('----- Done')
 
 def add_expl_point(addrs, args, *coord):
+    i = int(args[1]['expl_record'].sum())
+    args[1]['expl_points'][i, :] = np.array((coord[0], coord[1]))
     n = args[1]['expl_record'].shape[0]
     xIdx = int(coord[0] * n)
     yIdx = int(coord[1] * n)
@@ -116,7 +118,10 @@ def add_expl_point(addrs, args, *coord):
         args[1]['expl_record'][xIdx, yIdx] += 1
 
 def init_expl(addrs, args, size):
-    args[1]['expl_record'] = zeros((size, size))
+    sr = 100
+    dur = 300
+    args[1]['expl_record'] = np.zeros((size, size))
+    args[1]['expl_points'] = np.zeros((sr * dur, 2))
 
 def print_expl(addrs, args, *unused):
     print(args[1]['expl_record'])
@@ -125,7 +130,42 @@ def interpolation(addrs, args, interp):
     args[1]['corpus'].exportToMax(args[0], interp)
 
 def gaussian_attract(addrs, args, *mess):
-    args[1]['corpus'].simpleAttractor(mess[0], client=args[0])
+    mx = (mess[0], )
+    my = (mess[1], )
+    sigx = (mess[2], )
+    sigy = (mess[3], )
+    theta = (mess[4], )
+    args[1]['corpus'].simpleAttractor(mx, my, sigx, sigy, theta, client=args[0])
+
+def ident_gaussian(addrs, args, *mess):
+    data = args[1]['expl_points']
+    n_comp = 3
+    gmm = mixture.GaussianMixture(
+        n_components = n_comp, 
+        covariance_type = 'full',
+        init_params = 'kmeans'
+    )
+    gmm.fit(data)
+    
+    mx = []
+    my = []
+    sigx = []
+    sigy = []
+    theta = []
+    for i in range(n_comp):
+        v, w = np.linalg.eigh(gmm.covariances_[i])
+        mean = gmm.means_[i]
+        angle = np.arctan2(w[0][1], w[0][0])
+        v = 2.0 * np.sqrt(2.0) * np.sqrt(v)
+        mx.append(mean[0])
+        my.append(mean[1])
+        sigx.append(v[0])
+        sigy.append(v[1])
+        theta.append(angle)
+    
+    print(mx, my, sigx, sigy, theta)
+    args[1]['corpus'].simpleAttractor(mx, my, sigx, sigy, theta, client=args[0])
+
 
 if __name__ == "__main__":
     parser_client = argparse.ArgumentParser()
@@ -158,6 +198,7 @@ if __name__ == "__main__":
     dispatcher.map("/print_expl", print_expl, client, global_hash)
     dispatcher.map("/interpolation", interpolation, client, global_hash)
     dispatcher.map("/gaussian_attract", gaussian_attract, client, global_hash)
+    dispatcher.map("/ident_gaussian", ident_gaussian, client, global_hash)
 
     dispatcher.map("/print", print)
     dispatcher.map("/eval", eval_str, client, global_hash)

@@ -120,13 +120,18 @@ class Corpus():
                 p2.near.append(p3)
     
     def uniform(self, client=None, store=True):
-        c1, c2 = self.unispring(uniform=True, exportPeriod=int(bool(client)), client=client)
+        c1, c2 = self.unispring(
+            uniform=True,
+            exportPeriod=int(bool(client)),
+            client=client)
         if store:
             for p in self.getAllPoints():
                 p.storeUni()
         return c1, c2
         
-    def unispring(self, uniform=False ,exportPeriod=0, client=None, limit=0, hDist='uniform', hTable=None):
+    def unispring(
+            self, uniform=False, exportPeriod=0, client=None,
+            limit=0, hDist='uniform', hTable=None):
         allPoints = self.getAllPoints()
         # change hDist function
         self.hDist = hFunction(hDist, hTable)
@@ -187,47 +192,23 @@ class Corpus():
             point.resetNear()
         return count, c
 
-    def simpleAttractorOld(self, G, coeff, recallUni=True, client=None):
-        mx = [0.4]
-        my = [0.5]
+    def simpleAttractor(
+            self, mx, my, sigx, sigy, theta, 
+            recallUni=True, client=None):
         for i in range(len(mx)):
-            s_x = coeff
-            s_y = 2 * coeff
-            theta = 0
-            a = cos(theta)**2 / (2 * s_x**2) + sin(theta)**2 / (2 * s_y**2)
-            b = sin(2*theta) / (4 * s_x**2) - sin(2*theta)**2 / (4 * s_y**2)
-            c = sin(theta)**2 / (2 * s_x**2) + cos(theta)**2 / (2 * s_y**2)
-            f_norm = norm([mx[i],my[i]],[[a,b],[b,c]])
-            center_gaussian = Point(mx[i],my[i])
-            max_gaussian = f_norm.pdf((mx[i],my[i]))
-            allPoints = self.getAllPoints()
-            for p in allPoints:
-                if recallUni:
-                    p.recallUni()
-                fg = G * f_norm.pdf((p.x, p.y)) / max_gaussian
-                fa = G / p.distTo(center_gaussian)**2
-                fs = G * p.distTo(center_gaussian)
-                f = fs
-                k = 1
-                l = f / k
-                l = min(l, p.distTo(center_gaussian))
-                p.attractiveForce(l, center_gaussian)
-        for p in allPoints:
-            p.update()
-        if client:
-            self.exportToMax(client)
-
-    def simpleAttractor(self, coeff, recallUni=True, client=None):
-        mx = [0.2, 0.5, 0.8]
-        my = [0.5, 0.2, 0.8]
-        # mx = [0.5]
-        # my = [0.5]
-        for i in range(len(mx)):
-            def dg(x, y): 
-                sx = 0.25
-                sy = 0.25
-                deriv_gauss = exp(-1 * ((x - mx[i])**2 / (2 * sx**2) + (y - my[i])**2 / (2 * sy**2)))
-                deriv_gauss *= sqrt((x - mx[i])**2 / sx**2 + (y - my[i])**2 / sy**2)
+            def dg(x, y):
+                x_gauss = x - mx[i]
+                y_gauss = y - my[i]
+                x_rot = x_gauss * cos(theta[i]) + y_gauss * sin(theta[i])
+                y_rot = y_gauss * cos(theta[i]) - x_gauss * sin(theta[i])
+                x_rot += mx[i]
+                y_rot += my[i]
+                sx = sigx[i]
+                sy = sigy[i]
+                deriv_gauss = (x_rot - mx[i])**2 / (2 * sx**2)
+                deriv_gauss += (y_rot - my[i])**2 / (2 * sy**2)
+                deriv_gauss = exp(-1 * deriv_gauss)
+                deriv_gauss *= sqrt((x_rot - mx[i])**2 / sx**2 + (y_rot - my[i])**2 / sy**2)
                 return deriv_gauss
             center_gaussian = Point(mx[i],my[i])
             max_gaussian = 0.86
@@ -235,17 +216,8 @@ class Corpus():
             for p in allPoints:
                 if recallUni:
                     p.recallUni()
-                # fg = G * f_norm.pdf((p.x, p.y)) / max_gaussian
-                # fa = G / p.distTo(center_gaussian)**2
-                # fs = G * p.distTo(center_gaussian)
                 f = 0.184 * dg(p.x, p.y) / max_gaussian
-                c = 0.55 # 0.55: unused
-                border = 0.5 - c
-                if (border < p.x < 1-border and border < p.y < 1-border):
-                    k = min(9 * (p.distTo(center_gaussian)/coeff)**7 + 1, 10)
-                else:
-                    k = (10 - 9*c**7+1)/(sqrt(2)/2 - c) * p.distTo(center_gaussian) + 9*c**7+1
-                    # k = 10
+                k = min(9 * (p.distTo(center_gaussian)/1)**7 + 1, 10)
                 l = f / k
                 l = min(l, p.distTo(center_gaussian))
                 p.attractiveForce(l, center_gaussian)
