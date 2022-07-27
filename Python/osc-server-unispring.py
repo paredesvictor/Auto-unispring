@@ -85,7 +85,11 @@ def init_unispring(addrs, args, *descr):
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = RegionPolygon(vertices)
-    args[1]['corpus'] = usp.Corpus(args[1]['norm_buffer'], region, descr[0]+1, descr[1]+1)
+    args[1]['corpus'] = usp.Corpus(
+        args[1]['norm_buffer'], 
+        region, descr[0]+1, 
+        descr[1]+1
+    )
     print('e : ',args[1]['corpus'].uniform(client=args[0]))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
@@ -96,14 +100,25 @@ def update_unispring(addrs, args, *coord):
     vertices = [(coord[i],1-coord[i+1]) for i in range(0,len(coord),2)]
     region = RegionPolygon(vertices)
     args[1]["corpus"].region = region
-    print('e : ',args[1]["corpus"].unispring(exportPeriod=1, client=args[0], limit=200*(len(vertices)/4)))
+    print('e : ',args[1]["corpus"].unispring(
+        exportPeriod=1, 
+        client=args[0], 
+        limit=200*(len(vertices)/4)
+        ))
     args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
 
 def adapt_unispring(addrs, args, *unused):
     print('Adapt...')
-    print('e : ',args[1]["corpus"].unispring(exportPeriod=1, client=args[0], limit=500, hDist='from_table', hTable=args[1]['expl_record']))
+    e = args[1]["corpus"].unispring(
+        exportPeriod=1, 
+        client=args[0], 
+        limit=500, 
+        hDist='from_table', 
+        hTable=args[1]['expl_record']
+        )
+    print('e : ',e)
     args[1]["corpus"].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -135,7 +150,9 @@ def gaussian_attract(addrs, args, *mess):
     sigx = (mess[2], )
     sigy = (mess[3], )
     theta = (mess[4], )
-    args[1]['corpus'].simpleAttractor(mx, my, sigx, sigy, theta, client=args[0])
+    args[1]['corpus'].simpleAttractor(
+        mx, my, sigx, sigy, theta, client=args[0]
+        )
 
 def ident_gaussian(addrs, args, *mess):
     data = args[1]['expl_points']
@@ -146,7 +163,6 @@ def ident_gaussian(addrs, args, *mess):
         init_params = 'kmeans'
     )
     gmm.fit(data)
-    
     mx = []
     my = []
     sigx = []
@@ -162,9 +178,10 @@ def ident_gaussian(addrs, args, *mess):
         sigx.append(v[0])
         sigy.append(v[1])
         theta.append(angle)
-    
     print(mx, my, sigx, sigy, theta)
-    args[1]['corpus'].simpleAttractor(mx, my, sigx, sigy, theta, client=args[0])
+    args[1]['corpus'].simpleAttractor(
+        mx, my, sigx, sigy, theta, client=args[0]
+        )
 
 
 if __name__ == "__main__":
