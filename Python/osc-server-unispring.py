@@ -123,6 +123,24 @@ def adapt_unispring(addrs, args, *unused):
     args[0].send_message('/update', 'update')
     print('----- Done')
 
+def scale_unispring(addrs, args, *coeff):
+    args[1]['corpus'].exportToMax(args[0], coeff = coeff)
+
+def corner_unispring(addrs, args, corner):
+    if corner == 1:
+        coeff = (0.5, 0, 0.5, 0)
+        invert = (1, 1)
+    elif corner == 2:
+        coeff = (0.5, 0.5, 0.5, 0)
+        invert = (0, 1)
+    elif corner == 3:
+        coeff = (0.5, 0, 0.5, 0.5)
+        invert = (1, 0)
+    elif corner == 4:
+        coeff = (0.5, 0.5, 0.5, 0.5)
+        invert = (0, 0)
+    args[1]['corpus'].exportToMax(args[0], coeff = coeff, invert = invert)
+
 def add_expl_point(addrs, args, *coord):
     i = int(args[1]['expl_record'].sum())
     args[1]['expl_points'][i, :] = np.array((coord[0], coord[1]))
@@ -177,8 +195,12 @@ def ident_gaussian(addrs, args, *mess):
         my.append(mean[1])
         sigx.append(v[0])
         sigy.append(v[1])
-        theta.append(angle)
-    print(mx, my, sigx, sigy, theta)
+        theta.append(0-angle)
+    for i in range(3):
+        print(i+1, '.')
+        print('mean: ', mx[i], my[i])
+        print('sig : ', sigx[i], sigy[i])
+        print('angle: ',180*theta[i]/np.pi)
     args[1]['corpus'].simpleAttractor(
         mx, my, sigx, sigy, theta, client=args[0]
         )
@@ -208,6 +230,8 @@ if __name__ == "__main__":
 
     dispatcher.map("/init_unispring", init_unispring, client, global_hash)
     dispatcher.map("/adapt_unispring", adapt_unispring, client, global_hash)
+    dispatcher.map("/scale_unispring", scale_unispring, client, global_hash)
+    dispatcher.map("/corner_unispring", corner_unispring, client, global_hash)
     dispatcher.map("/region", update_unispring, client, global_hash)
 
     dispatcher.map("/init_expl", init_expl, client, global_hash)

@@ -226,11 +226,20 @@ class Corpus():
         if client:
             self.exportToMax(client)
     
-    def exportToMax(self, client, itrp=0):
+    def exportToMax(self, client, itrp=0, coeff=[], invert=(0,0)):
+        if coeff:
+            x_div, x_off, y_div, y_off = coeff
         for buffer in self.buffers:
             client.send_message('/buffer_index', buffer.id)
             uniX = [p.x*(1-itrp) + p.uni_x*itrp for p in buffer.points]
             uniY = [p.y*(1-itrp) + p.uni_y*itrp for p in buffer.points]
+            if invert[0]:
+                uniX = [(1 - x) for x in uniX]
+            if invert[1]:
+                uniY = [(1 - y) for y in uniY]
+            if coeff:
+                uniX = [x * x_div + x_off for x in uniX]
+                uniY = [y * y_div + y_off for y in uniY]
             n_rows = len(uniX)
             steps = ceil(n_rows/200)
             client.send_message('/matrixcol', 7)
