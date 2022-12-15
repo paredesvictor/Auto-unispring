@@ -159,7 +159,8 @@ class Corpus():
             hScale = self.getScalingFactor(l0)
             #  fScale = 1
             # 0.4 for 121 points
-            fScale = 0.35 * max(0,(1 - (3*count/nbPoints)**2)) + 0.8
+            # fScale = 0.4 * max(0,(1 - (2.25*count/nbPoints)**2)) + 0.8
+            fScale = 0.85
             for point in allPoints:
                 for near in point.near:
                     midX ,midY = point.midTo(near)
@@ -195,31 +196,25 @@ class Corpus():
     def simpleAttractor(
             self, mx, my, sigx, sigy, theta, 
             recallUni=True, client=None):
+        allPoints = self.getAllPoints()
+        for p in allPoints:
+            if recallUni:
+                p.recallUni()
         for i in range(len(mx)):
-            def dg(x, y):
-                x_gauss = x - mx[i]
-                y_gauss = y - my[i]
-                x_rot = x_gauss * cos(theta[i]) + y_gauss * sin(theta[i])
-                y_rot = y_gauss * cos(theta[i]) - x_gauss * sin(theta[i])
-                x_rot += mx[i]
-                y_rot += my[i]
-                sx = sigx[i]
-                sy = sigy[i]
-                deriv_gauss = (x_rot - mx[i])**2 / (2 * sx**2)
-                deriv_gauss += (y_rot - my[i])**2 / (2 * sy**2)
-                deriv_gauss = exp(-1 * deriv_gauss)
-                deriv_gauss *= sqrt((x_rot - mx[i])**2 / sx**2 + (y_rot - my[i])**2 / sy**2)
-                return deriv_gauss
+            def gauss2D(x, y):
+                a = cos(theta[i])**2/(2*sigx[i]**2) + sin(theta[i])**2/(2*sigy[i]**2)
+                b = -sin(2*theta[i])/(4*sigx[i]**2) + sin(2*theta[i])/(4*sigy[i]**2)
+                c = sin(theta[i])**2/(2*sigx[i]**2) + cos(theta[i])**2/(2*sigy[i]**2)
+                gauss = exp(- a*(x-mx[i])**2 - 2*b*(x-mx[i])*(y-my[i]) - c*(y-my[i])**2)
+                return gauss
             center_gaussian = Point(mx[i],my[i])
-            max_gaussian = 0.86
-            allPoints = self.getAllPoints()
             for p in allPoints:
-                if recallUni:
-                    p.recallUni()
-                f = 0.184 * dg(p.x, p.y) / max_gaussian
-                k = min(9 * (p.distTo(center_gaussian)/1)**7 + 1, 10)
+                f = 1 / (gauss2D(p.x, p.y) + 0)
+                k = 1
                 l = f / k
-                l = min(l, p.distTo(center_gaussian))
+                #k = min(9 * (p.distTo(center_gaussian)/1)**7 + 1, 10)
+                #l = f / k
+                #l = min(l, p.distTo(center_gaussian))
                 p.attractiveForce(l, center_gaussian)
         for p in allPoints:
             p.update()
@@ -274,15 +269,15 @@ class Buffer():
 class Point():
     
     def __init__(self, x, y):
-        self.x = x
+        self.x = x # current position
         self.y = y
-        self.uni_x = x
+        self.uni_x = x # position after uniformisation
         self.uni_y = y
-        self.ogX = x
+        self.ogX = x # position before push
         self.ogY = y
-        self.near = []
-        self.pushX = 0.0
+        self.pushX = 0.0 # amount of pushing for next step
         self.pushY = 0.0
+        self.near = []
     
     def midTo(self, point):
         midX = (self.x + point.x)/2
