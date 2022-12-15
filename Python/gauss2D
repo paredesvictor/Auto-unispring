@@ -1,0 +1,25 @@
+from numpy import cos, sin, exp, linspace, array, max
+import matplotlib.pyplot as plt
+
+mx = [0]
+my = [0]
+sigx = [5]
+sigy = [5]
+theta = [0]
+def gauss2D(x, y):
+    i = 0
+    a = cos(theta[i])**2/(2*sigx[i]**2) + sin(theta[i])**2/(2*sigy[i]**2)
+    b = -sin(2*theta[i])/(4*sigx[i]**2) + sin(2*theta[i])/(4*sigy[i]**2)
+    c = sin(theta[i])**2/(2*sigx[i]**2) + cos(theta[i])**2/(2*sigy[i]**2)
+    gauss = exp(- a*(x-mx[i])**2 - 2*b*(x-mx[i])*(y-my[i]) - c*(y-my[i])**2)
+    return 1/(gauss+4)
+
+x_vec = linspace(-6,6, 60)
+y_vec = x_vec.copy()
+print(x_vec, y_vec)
+z = array([[gauss2D(x, y) for x in x_vec] for y in y_vec])
+
+fig = plt.figure()
+ax = plt.axes(projection='3d')
+ax.contour3D(x_vec, y_vec, z-max(z),80, cmap='binary')
+plt.show()

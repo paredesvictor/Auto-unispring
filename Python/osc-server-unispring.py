@@ -7,6 +7,13 @@ from region import RegionPolygon
 import numpy as np
 from sklearn import mixture
 
+def gauss2D(x, y, mx, my, sigx, sigy, theta):
+    a = np.cos(theta)**2/(2*sigx**2) + np.sin(theta)**2/(2*sigy**2)
+    b = -np.sin(2*theta)/(4*sigx**2) + np.sin(2*theta)/(4*sigy**2)
+    c = np.sin(theta)**2/(2*sigx**2) + np.cos(theta)**2/(2*sigy**2)
+    gauss = np.exp(- a*(x-mx)**2 - 2*b*(x-mx)*(y-my) - c*(y-my)**2)
+    return gauss
+
 def MinMaxScale(track):
     n_descr = len(track['1'][0])
     norm_track = {}
@@ -129,16 +136,16 @@ def scale_unispring(addrs, args, *coeff):
 def corner_unispring(addrs, args, corner):
     if corner == 1:
         coeff = (0.5, 0, 0.5, 0)
-        invert = (1, 1)
+        invert = (0, 0)
     elif corner == 2:
         coeff = (0.5, 0.5, 0.5, 0)
-        invert = (0, 1)
+        invert = (1, 0)
     elif corner == 3:
         coeff = (0.5, 0, 0.5, 0.5)
-        invert = (1, 0)
+        invert = (0, 1)
     elif corner == 4:
         coeff = (0.5, 0.5, 0.5, 0.5)
-        invert = (0, 0)
+        invert = (1, 1)
     args[1]['corpus'].exportToMax(args[0], coeff = coeff, invert = invert)
 
 def add_expl_point(addrs, args, *coord):
