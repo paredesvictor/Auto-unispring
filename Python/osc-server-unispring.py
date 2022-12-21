@@ -89,6 +89,7 @@ def write_norm_track(addrs, args, *unused):
     print('----- Done')
 
 def init_unispring(addrs, args, *descr):
+    k=1.09
     print('Uniformization...')
     vertices = ((0,0),(1,0),(1,1),(0,1))
     region = RegionPolygon(vertices)
@@ -97,7 +98,7 @@ def init_unispring(addrs, args, *descr):
         region, descr[0]+1, 
         descr[1]+1
     )
-    print('e : ',args[1]['corpus'].uniform(client=args[0]))
+    print('e : ',args[1]['corpus'].uniform(k, client=args[0]))
     args[1]['corpus'].exportToMax(args[0])
     args[0].send_message('/update', 'update')
     print('----- Done')
@@ -175,9 +176,8 @@ def gaussian_attract(addrs, args, *mess):
     sigx = (mess[2], )
     sigy = (mess[3], )
     theta = (mess[4], )
-    args[1]['corpus'].simpleAttractor(
-        mx, my, sigx, sigy, theta, client=args[0]
-        )
+    density_func = lambda x, y : gauss2D(x, y, mx, my, sigx, sigy, theta)
+    args[1]['corpus'].simpleAttractor(density_func, client=args[0])
 
 def ident_gaussian(addrs, args, *mess):
     data = args[1]['expl_points']
