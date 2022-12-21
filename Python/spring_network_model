@@ -1,0 +1,34 @@
+import numpy as np
+import matplotlib.pyplot as plt
+import time
+
+class Network:
+    def __init__(self, network) -> None:
+        self.network = np.array(network) - 0.25
+        self.is_living = False
+
+    def evolve(self):
+        self.network += 0.01
+
+    def plot(self):
+        net = self.network.reshape((-1, 2))
+        fig, ax = plt.subplots()
+        ax.set_xlim(0, 1)
+        ax.set_ylim(0, 1)
+        ax.scatter(net[:, 0], net[:, 1])
+        plt.show(block = False)
+
+# init network
+network = Network((0.25,0.25,0.75,0.25,0.75,0.75,0.25,0.75)) # x, y coord...
+network.plot()
+time.sleep(2)
+print('closing')
+plt.clf()
+
+# n = 50
+# fps = 2
+# for i in range(n):
+#     plt.clf()
+#     network.evolve()
+#     network.plot()
+#     time.sleep(1 / fps)
